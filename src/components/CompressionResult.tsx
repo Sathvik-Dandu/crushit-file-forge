@@ -1,9 +1,11 @@
 
-import React from "react";
-import { Download, Redo } from "lucide-react";
+import React, { useState } from "react";
+import { Download, Redo, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes } from "@/lib/utils";
+import { QRCodeSVG } from "qrcode.react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface CompressionResultProps {
   originalSize: number;
@@ -20,12 +22,18 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   compressedFile,
   onReset
 }) => {
+  const [qrUrl, setQrUrl] = useState<string>("");
   const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
   const fileReduction = originalSize - compressedSize;
-  const fileExtension = fileName.split('.').pop() || '';
   
-  const downloadFile = () => {
+  const generateDownloadUrl = () => {
     const url = URL.createObjectURL(compressedFile);
+    setQrUrl(url);
+    return url;
+  };
+
+  const downloadFile = () => {
+    const url = generateDownloadUrl();
     const link = document.createElement('a');
     
     // Create the file name with "compressed" prefix
@@ -63,7 +71,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
         <Button 
           onClick={downloadFile}
           className="gap-2"
@@ -71,6 +79,33 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
           <Download size={18} />
           Download
         </Button>
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button 
+              variant="outline"
+              onClick={generateDownloadUrl}
+              className="gap-2"
+            >
+              <QrCode size={18} />
+              QR Code
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Scan to Download</DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-center p-6">
+              <QRCodeSVG
+                value={qrUrl}
+                size={256}
+                level="H"
+                includeMargin
+                className="max-w-full h-auto"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
         
         <Button 
           variant="outline" 
