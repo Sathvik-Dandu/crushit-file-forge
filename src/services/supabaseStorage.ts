@@ -21,54 +21,46 @@ export async function ensureCompressedFilesBucketExists() {
   checkSupabaseConfig();
   
   try {
-    // Try to access the bucket directly without creating it first
-    console.log('Attempting to access compressed-files bucket');
-    const { error: accessError } = await supabase!.storage.from('compressed-files').list('', {
-      limit: 1,
-    });
+    // First try to list files in the bucket to check if it exists and we have access
+    const { data: bucketList, error: listError } = await supabase!.storage.listBuckets();
     
-    // If we can access it, the bucket exists and we have permission
-    if (!accessError) {
-      console.log('Successfully accessed the compressed-files bucket');
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      throw new Error(`Cannot access storage: ${listError.message}`);
+    }
+    
+    // Check if bucket exists in the list
+    const bucketExists = bucketList.some(bucket => bucket.name === 'compressed-files');
+    
+    if (bucketExists) {
+      console.log('The compressed-files bucket already exists');
       return true;
     }
     
-    // If access error is not a "not found" error, it might be permissions-related
-    if (accessError && !accessError.message.includes('not found')) {
-      console.error('Error accessing bucket:', accessError);
-      if (accessError.message.includes('row-level security')) {
-        throw new Error(`Permission denied: ${accessError.message}`);
-      }
-    }
-    
-    // If we get here, try to create the bucket
+    // If bucket doesn't exist, create it
     console.log('Bucket not found, attempting to create');
-    const { error: createError } = await supabase!.storage.createBucket('compressed-files', {
+    const { data: newBucket, error: createError } = await supabase!.storage.createBucket('compressed-files', {
       public: true,
-      allowedMimeTypes: ['*/*'],
       fileSizeLimit: 50 * 1024 * 1024 // 50MB
     });
     
     if (createError) {
       console.error('Failed to create bucket:', createError);
-      if (createError.message.includes('already exists')) {
-        console.log('Bucket already exists (from error)');
-        return true;
-      }
       
+      // Provide more specific error messages
       if (createError.message.includes('row-level security')) {
-        throw new Error(`Permission denied: ${createError.message}`);
+        throw new Error('Permission denied: You need to be logged in to create storage buckets');
       }
       
       throw new Error(`Failed to create storage bucket: ${createError.message}`);
     }
     
-    console.log('Bucket created successfully');
+    console.log('Bucket created successfully', newBucket);
     return true;
   } catch (error) {
     console.error('Error ensuring bucket exists:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Could not create or access storage bucket: ${errorMessage}`);
+    throw new Error(`Storage access error: ${errorMessage}`);
   }
 }
 

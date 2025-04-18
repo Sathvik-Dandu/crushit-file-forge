@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Layout from "@/components/Layout";
 import SimpleLogin from "@/components/SimpleLogin";
 import { CompressionHistoryItem } from "@/components/UserHistory";
@@ -16,8 +16,7 @@ const Index = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [history, setHistory] = useState<CompressionHistoryItem[]>([]);
   
-  // Start with empty history for new users instead of mock data
-  // In a real app, we would fetch this from a database
+  // Start with empty history for new users
   
   const handleDownloadHistory = (id: string) => {
     console.log(`Downloading file with id ${id}`);

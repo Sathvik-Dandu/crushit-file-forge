@@ -41,8 +41,8 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   
   const generateDownloadUrl = async () => {
     if (!user || !user.id) {
-      toast.error("Please log in to upload files");
-      setQrError("You need to be logged in to generate a QR code.");
+      toast.error("Please log in to generate a QR code");
+      setQrError("You need to be logged in to generate a QR code");
       return;
     }
     
@@ -52,17 +52,28 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     try {
       console.log("Starting file upload process");
       
+      // First check if the user is authenticated with Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Your session has expired. Please log in again.");
+      }
+      
       try {
         // Check if we can access the storage bucket
+        console.log("Checking if storage bucket exists");
         const bucketCreated = await ensureCompressedFilesBucketExists();
         if (!bucketCreated) {
           throw new Error("Could not access storage bucket");
         }
       } catch (bucketError) {
         console.error("Error with storage bucket:", bucketError);
-        // RLS error is likely here - provide more user-friendly error message
-        if (bucketError instanceof Error && bucketError.message.includes('row-level security')) {
-          throw new Error("You don't have permission to access the storage. Please log out and back in.");
+        // Provide more specific error message based on the error
+        if (bucketError instanceof Error) {
+          if (bucketError.message.includes('row-level security')) {
+            throw new Error("Permission denied: Please log out and back in to refresh your session.");
+          } else if (bucketError.message.includes('permission')) {
+            throw new Error("Storage permission denied. Please try again later.");
+          }
         }
         throw bucketError;
       }
@@ -102,7 +113,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       console.error("Failed to generate download URL:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       setQrError(errorMessage);
-      toast.error("Failed to upload file. " + errorMessage);
+      toast.error("Failed to upload file: " + errorMessage);
       return null;
     } finally {
       setIsGeneratingQr(false);
