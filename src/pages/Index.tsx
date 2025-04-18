@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import SimpleLogin from "@/components/SimpleLogin";
-import { generateMockHistory } from "@/lib/utils";
 import { CompressionHistoryItem } from "@/components/UserHistory";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,11 +16,8 @@ const Index = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [history, setHistory] = useState<CompressionHistoryItem[]>([]);
   
-  useEffect(() => {
-    if (user) {
-      setHistory(generateMockHistory(8));
-    }
-  }, [user]);
+  // Start with empty history for new users instead of mock data
+  // In a real app, we would fetch this from a database
   
   const handleDownloadHistory = (id: string) => {
     console.log(`Downloading file with id ${id}`);

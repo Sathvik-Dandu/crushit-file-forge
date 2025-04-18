@@ -21,45 +21,49 @@ export async function ensureCompressedFilesBucketExists() {
   checkSupabaseConfig();
   
   try {
-    // Check if bucket exists
-    const { data: buckets, error: listError } = await supabase!.storage.listBuckets();
+    // Try to access the bucket directly without creating it first
+    console.log('Attempting to access compressed-files bucket');
+    const { error: accessError } = await supabase!.storage.from('compressed-files').list('', {
+      limit: 1,
+    });
     
-    if (listError) {
-      console.error('Failed to list buckets:', listError);
-      throw new Error(`Failed to list storage buckets: ${listError.message}`);
+    // If we can access it, the bucket exists and we have permission
+    if (!accessError) {
+      console.log('Successfully accessed the compressed-files bucket');
+      return true;
     }
     
-    const bucketExists = buckets?.some(bucket => bucket.name === 'compressed-files');
-    
-    if (!bucketExists) {
-      console.log('Creating compressed-files bucket');
-      const { error } = await supabase!.storage.createBucket('compressed-files', {
-        public: true,
-        allowedMimeTypes: ['*/*'],
-        fileSizeLimit: 50 * 1024 * 1024 // 50MB
-      });
-      
-      if (error) {
-        console.error('Failed to create bucket:', error);
-        if (error.message.includes('already exists')) {
-          // If the error is because the bucket already exists, we can continue
-          console.log('Bucket already exists (from error)');
-          return true;
-        }
-        throw new Error(`Failed to create storage bucket: ${error.message}`);
+    // If access error is not a "not found" error, it might be permissions-related
+    if (accessError && !accessError.message.includes('not found')) {
+      console.error('Error accessing bucket:', accessError);
+      if (accessError.message.includes('row-level security')) {
+        throw new Error(`Permission denied: ${accessError.message}`);
       }
-      console.log('Bucket created successfully');
-    } else {
-      console.log('Bucket already exists');
     }
     
-    // Verify bucket is accessible by trying to list objects
-    const { error: testError } = await supabase!.storage.from('compressed-files').list();
-    if (testError) {
-      console.error('Bucket exists but cannot be accessed:', testError);
-      throw new Error(`Bucket exists but cannot be accessed: ${testError.message}`);
+    // If we get here, try to create the bucket
+    console.log('Bucket not found, attempting to create');
+    const { error: createError } = await supabase!.storage.createBucket('compressed-files', {
+      public: true,
+      allowedMimeTypes: ['*/*'],
+      fileSizeLimit: 50 * 1024 * 1024 // 50MB
+    });
+    
+    if (createError) {
+      console.error('Failed to create bucket:', createError);
+      if (createError.message.includes('already exists')) {
+        console.log('Bucket already exists (from error)');
+        return true;
+      }
+      
+      if (createError.message.includes('row-level security')) {
+        throw new Error(`Permission denied: ${createError.message}`);
+      }
+      
+      throw new Error(`Failed to create storage bucket: ${createError.message}`);
     }
     
+    console.log('Bucket created successfully');
     return true;
   } catch (error) {
     console.error('Error ensuring bucket exists:', error);
@@ -75,7 +79,8 @@ export async function uploadCompressedFile(
 ): Promise<{ path: string; publicUrl: string }> {
   checkSupabaseConfig();
   
-  // Ensure the bucket exists
+  // Check if bucket is accessible before attempting upload
+  console.log('Checking bucket access before upload');
   await ensureCompressedFilesBucketExists();
   
   const fileName = `compressed_${Date.now()}_${file.name}`;

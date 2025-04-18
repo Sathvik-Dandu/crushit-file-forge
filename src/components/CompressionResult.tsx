@@ -53,13 +53,17 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       console.log("Starting file upload process");
       
       try {
-        // Explicitly test bucket access before trying to upload
+        // Check if we can access the storage bucket
         const bucketCreated = await ensureCompressedFilesBucketExists();
         if (!bucketCreated) {
-          throw new Error("Could not create or access storage bucket");
+          throw new Error("Could not access storage bucket");
         }
       } catch (bucketError) {
         console.error("Error with storage bucket:", bucketError);
+        // RLS error is likely here - provide more user-friendly error message
+        if (bucketError instanceof Error && bucketError.message.includes('row-level security')) {
+          throw new Error("You don't have permission to access the storage. Please log out and back in.");
+        }
         throw bucketError;
       }
       
@@ -98,7 +102,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       console.error("Failed to generate download URL:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       setQrError(errorMessage);
-      toast.error("Failed to upload file. Please try again.");
+      toast.error("Failed to upload file. " + errorMessage);
       return null;
     } finally {
       setIsGeneratingQr(false);
