@@ -19,7 +19,7 @@ const Index = () => {
   const [isCompressing, setIsCompressing] = useState(false);
   
   // User states
-  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; email: string; name: string } | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [history, setHistory] = useState<CompressionHistoryItem[]>([]);
   
@@ -74,7 +74,12 @@ const Index = () => {
   };
   
   const handleLogin = (userData: { email: string; name: string }) => {
-    setUser(userData);
+    // Add a unique ID for the user (in a real app, this would come from authentication)
+    setUser({
+      id: `user-${Date.now()}`,
+      email: userData.email,
+      name: userData.name
+    });
     setShowLoginModal(false);
   };
   
@@ -169,6 +174,7 @@ const Index = () => {
                       fileName={selectedFile.name}
                       compressedFile={compressedFile}
                       onReset={handleReset}
+                      user={user}
                     />
                   </>
                 )}
@@ -233,6 +239,7 @@ const Index = () => {
                   fileName={selectedFile.name}
                   compressedFile={compressedFile}
                   onReset={handleReset}
+                  user={user}
                 />
               </>
             ) : (
