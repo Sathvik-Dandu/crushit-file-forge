@@ -5,26 +5,32 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Check if Supabase URL is available before creating client
+// Check if Supabase URL is available
 if (!supabaseUrl) {
   console.error('Supabase URL is not set. Please set VITE_SUPABASE_URL environment variable.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create client only if URL is available
+export const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseAnonKey) : null;
+
+// Function to check if Supabase is properly configured
+function checkSupabaseConfig() {
+  if (!supabase) {
+    throw new Error('Supabase configuration is missing. Please set the VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+  }
+}
 
 // Function to upload file to Supabase storage
 export async function uploadCompressedFile(
   file: File, 
   userId: string
 ): Promise<{ path: string; publicUrl: string }> {
-  if (!supabaseUrl) {
-    throw new Error('Supabase configuration is missing. Please set the environment variables.');
-  }
+  checkSupabaseConfig();
   
   const fileName = `compressed_${Date.now()}_${file.name}`;
   const filePath = `user_files/${userId}/${fileName}`;
   
-  const { data, error } = await supabase.storage
+  const { data, error } = await supabase!.storage
     .from('compressed-files')
     .upload(filePath, file, {
       cacheControl: '300', // 5 minutes
@@ -33,7 +39,7 @@ export async function uploadCompressedFile(
   
   if (error) throw error;
   
-  const { data: urlData } = supabase.storage
+  const { data: urlData } = supabase!.storage
     .from('compressed-files')
     .getPublicUrl(filePath);
   
@@ -47,11 +53,9 @@ export async function uploadCompressedFile(
 export async function getFileDownloadUrl(
   filePath: string
 ): Promise<string> {
-  if (!supabaseUrl) {
-    throw new Error('Supabase configuration is missing. Please set the environment variables.');
-  }
+  checkSupabaseConfig();
   
-  const { data } = supabase.storage
+  const { data } = supabase!.storage
     .from('compressed-files')
     .getPublicUrl(filePath);
   
@@ -60,11 +64,9 @@ export async function getFileDownloadUrl(
 
 // Function to delete a file from storage
 export async function deleteFileFromStorage(filePath: string): Promise<void> {
-  if (!supabaseUrl) {
-    throw new Error('Supabase configuration is missing. Please set the environment variables.');
-  }
+  checkSupabaseConfig();
   
-  const { error } = await supabase.storage
+  const { error } = await supabase!.storage
     .from('compressed-files')
     .remove([filePath]);
   

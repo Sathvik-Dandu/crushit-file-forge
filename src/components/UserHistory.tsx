@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ const UserHistory: React.FC<UserHistoryProps> = ({
       toast.success(`Downloaded ${item.fileName}`);
     } catch (error) {
       console.error("Download failed:", error);
-      toast.error("Failed to download file");
+      toast.error("Failed to download file. Please check your Supabase configuration.");
     }
   };
 

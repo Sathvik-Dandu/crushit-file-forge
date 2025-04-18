@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Download, Redo, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { formatBytes } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
-import { uploadCompressedFile } from "@/services/supabaseStorage";
+import { uploadCompressedFile, setupFileExpiration } from "@/services/supabaseStorage";
 
 interface CompressionResultProps {
   originalSize: number;
@@ -28,6 +29,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   const [qrUrl, setQrUrl] = useState<string>("");
   const [cloudFilePath, setCloudFilePath] = useState<string>("");
   const [expirationTime, setExpirationTime] = useState<Date | null>(null);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
   
   const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
   const fileReduction = originalSize - compressedSize;
@@ -45,6 +47,8 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       return;
     }
     
+    setIsGeneratingQr(true);
+    
     try {
       // Convert Blob to File
       const compressedFileAsFile = new File([compressedFile], getCompressedFileName(), {
@@ -60,6 +64,9 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       setExpirationTime(expiry);
       setCloudFilePath(path);
       
+      // Set up automatic file deletion
+      setupFileExpiration(path);
+      
       // Create download URL
       const downloadUrl = `${window.location.origin}/download-helper.html#${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expiry.getTime().toString())}`;
       
@@ -67,7 +74,9 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       return publicUrl;
     } catch (error) {
       console.error("Failed to generate download URL:", error);
-      toast.error("Failed to upload file");
+      toast.error("Failed to upload file. Please check your Supabase configuration.");
+    } finally {
+      setIsGeneratingQr(false);
     }
   };
 
@@ -134,10 +143,11 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
             <Button 
               variant="outline"
               onClick={generateDownloadUrl}
+              disabled={isGeneratingQr}
               className="gap-2 border-[#00ABE4] text-[#00ABE4] hover:bg-[#E9F1FA]"
             >
               <QrCode size={18} />
-              QR Code
+              {isGeneratingQr ? 'Generating...' : 'QR Code'}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md bg-white">
@@ -145,14 +155,21 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
               <DialogTitle className="text-[#00ABE4]">Scan to Download</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center p-6">
-              <QRCodeSVG
-                value={qrUrl}
-                size={256}
-                level="H"
-                fgColor="#00ABE4"
-                includeMargin
-                className="max-w-full h-auto"
-              />
+              {qrUrl ? (
+                <QRCodeSVG
+                  value={qrUrl}
+                  size={256}
+                  level="H"
+                  fgColor="#00ABE4"
+                  includeMargin
+                  className="max-w-full h-auto"
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">QR code could not be generated.</p>
+                  <p className="text-sm mt-2">Please ensure Supabase is configured correctly.</p>
+                </div>
+              )}
               {expirationTime && (
                 <div className="mt-4 text-center">
                   <p className="text-sm text-muted-foreground">
