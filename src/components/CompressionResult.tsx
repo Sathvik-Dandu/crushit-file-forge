@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Download, Redo, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,8 +27,6 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   user
 }) => {
   const [qrUrl, setQrUrl] = useState<string>("");
-  const [cloudFilePath, setCloudFilePath] = useState<string>("");
-  const [expirationTime, setExpirationTime] = useState<Date | null>(null);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
   
   const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
@@ -51,31 +48,21 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     setIsGeneratingQr(true);
     
     try {
-      // Convert Blob to File
       const compressedFileAsFile = new File([compressedFile], getCompressedFileName(), {
         type: compressedFile.type
       });
       
-      // Upload to Supabase
-      const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
+      const { publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
       
-      // Set expiration time to 5 minutes from now
-      const expiry = new Date();
-      expiry.setMinutes(expiry.getMinutes() + 5);
-      setExpirationTime(expiry);
-      setCloudFilePath(path);
+      const downloadUrl = new URL(window.location.origin);
+      downloadUrl.pathname = '/download-helper.html';
+      downloadUrl.hash = `${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())}`;
       
-      // Set up automatic file deletion
-      setupFileExpiration(path);
-      
-      // Create download URL
-      const downloadUrl = `${window.location.origin}/download-helper.html#${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expiry.getTime().toString())}`;
-      
-      setQrUrl(downloadUrl);
+      setQrUrl(downloadUrl.toString());
       return publicUrl;
     } catch (error) {
       console.error("Failed to generate download URL:", error);
-      toast.error("Failed to upload file. Please check your Supabase configuration.");
+      toast.error("Failed to upload file. Please try again.");
     } finally {
       setIsGeneratingQr(false);
     }
@@ -98,15 +85,6 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       console.error("Download failed:", error);
       toast.error("Download failed. Please try again.");
     }
-  };
-
-  const formatExpirationTime = () => {
-    if (!expirationTime) return "";
-    
-    return expirationTime.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
   };
 
   return (
@@ -157,25 +135,23 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
             </DialogHeader>
             <div className="flex flex-col items-center justify-center p-6">
               {qrUrl ? (
-                <QRCodeSVG
-                  value={qrUrl}
-                  size={256}
-                  level="H"
-                  fgColor="#00ABE4"
-                  includeMargin
-                  className="max-w-full h-auto"
-                />
+                <>
+                  <QRCodeSVG
+                    value={qrUrl}
+                    size={256}
+                    level="H"
+                    fgColor="#00ABE4"
+                    includeMargin
+                    className="max-w-full h-auto"
+                  />
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Scan this QR code with your phone to download the file
+                  </p>
+                </>
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">QR code could not be generated.</p>
-                  <p className="text-sm mt-2">Please ensure Supabase is configured correctly.</p>
-                </div>
-              )}
-              {expirationTime && (
-                <div className="mt-4 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    This QR code will expire in 5 minutes (at {formatExpirationTime()})
-                  </p>
+                  <p className="text-sm mt-2">Please try again.</p>
                 </div>
               )}
             </div>
