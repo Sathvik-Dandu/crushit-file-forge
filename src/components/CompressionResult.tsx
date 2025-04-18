@@ -8,6 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { uploadCompressedFile, setupFileExpiration } from "@/services/supabaseStorage";
+import { User } from "@supabase/supabase-js";
 
 interface CompressionResultProps {
   originalSize: number;
@@ -15,7 +16,7 @@ interface CompressionResultProps {
   fileName: string;
   compressedFile: Blob;
   onReset: () => void;
-  user: { id: string; email: string } | null;
+  user: User | null;
 }
 
 const CompressionResult: React.FC<CompressionResultProps> = ({
@@ -42,7 +43,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   };
   
   const generateDownloadUrl = async () => {
-    if (!user) {
+    if (!user || !user.id) {
       toast.error("Please log in to upload files");
       return;
     }
