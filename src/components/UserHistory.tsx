@@ -1,8 +1,9 @@
-
 import React from "react";
 import { Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBytes } from "@/lib/utils";
+import { getFileDownloadUrl } from "@/services/supabaseStorage";
+import { toast } from "@/components/ui/sonner";
 
 export interface CompressionHistoryItem {
   id: string;
@@ -11,6 +12,7 @@ export interface CompressionHistoryItem {
   compressedSize: number;
   date: string;
   fileType: string;
+  cloudFilePath?: string;
 }
 
 interface UserHistoryProps {
@@ -24,6 +26,29 @@ const UserHistory: React.FC<UserHistoryProps> = ({
   onDownload, 
   onDelete 
 }) => {
+  const handleCloudDownload = async (item: CompressionHistoryItem) => {
+    if (!item.cloudFilePath) {
+      toast.error("No cloud file available");
+      return;
+    }
+
+    try {
+      const downloadUrl = await getFileDownloadUrl(item.cloudFilePath);
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = item.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(`Downloaded ${item.fileName}`);
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast.error("Failed to download file");
+    }
+  };
+
   if (history.length === 0) {
     return (
       <div className="text-center p-8 border rounded-lg">
@@ -72,7 +97,7 @@ const UserHistory: React.FC<UserHistoryProps> = ({
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => onDownload(item.id)}
+                onClick={() => handleCloudDownload(item)}
                 title="Download"
               >
                 <Download size={18} />

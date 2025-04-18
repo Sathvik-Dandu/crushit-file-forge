@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Download, Redo, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { formatBytes } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
+import { uploadCompressedFile } from "@/services/supabaseStorage";
 
 interface CompressionResultProps {
   originalSize: number;
@@ -14,6 +14,7 @@ interface CompressionResultProps {
   fileName: string;
   compressedFile: Blob;
   onReset: () => void;
+  user: { id: string; email: string } | null;
 }
 
 const CompressionResult: React.FC<CompressionResultProps> = ({
@@ -21,14 +22,16 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   compressedSize,
   fileName,
   compressedFile,
-  onReset
+  onReset,
+  user
 }) => {
   const [qrUrl, setQrUrl] = useState<string>("");
+  const [cloudFilePath, setCloudFilePath] = useState<string>("");
   const [expirationTime, setExpirationTime] = useState<Date | null>(null);
+  
   const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
   const fileReduction = originalSize - compressedSize;
   
-  // Create the file name with "compressed" prefix
   const getCompressedFileName = () => {
     const nameParts = fileName.split('.');
     const extension = nameParts.pop();
@@ -36,25 +39,35 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     return `${baseName}_compressed.${extension}`;
   };
   
-  const generateDownloadUrl = () => {
+  const generateDownloadUrl = async () => {
+    if (!user) {
+      toast.error("Please log in to upload files");
+      return;
+    }
+    
     try {
-      const url = URL.createObjectURL(compressedFile);
+      // Convert Blob to File
+      const compressedFileAsFile = new File([compressedFile], getCompressedFileName(), {
+        type: compressedFile.type
+      });
+      
+      // Upload to Supabase
+      const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
       
       // Set expiration time to 5 minutes from now
       const expiry = new Date();
       expiry.setMinutes(expiry.getMinutes() + 5);
       setExpirationTime(expiry);
+      setCloudFilePath(path);
       
-      // Create a full download URL that will trigger download when accessed directly
-      // This includes the expiration timestamp
-      const downloadUrl = `${window.location.origin}/download-helper.html#${encodeURIComponent(url)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expiry.getTime().toString())}`;
+      // Create download URL
+      const downloadUrl = `${window.location.origin}/download-helper.html#${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expiry.getTime().toString())}`;
       
       setQrUrl(downloadUrl);
-      return url;
+      return publicUrl;
     } catch (error) {
       console.error("Failed to generate download URL:", error);
-      toast.error("Failed to generate download URL");
-      return "";
+      toast.error("Failed to upload file");
     }
   };
 
@@ -77,7 +90,6 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     }
   };
 
-  // Format the expiration time
   const formatExpirationTime = () => {
     if (!expirationTime) return "";
     
