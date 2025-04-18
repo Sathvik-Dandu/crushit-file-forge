@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Download, Redo, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,11 +53,18 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
         type: compressedFile.type
       });
       
-      const { publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
+      // Upload the file to Supabase
+      const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
       
+      // Set up automatic file expiration (5 minutes)
+      const expirationTime = new Date();
+      expirationTime.setMinutes(expirationTime.getMinutes() + 5);
+      await setupFileExpiration(path, 5);
+      
+      // Create the download URL with the file URL, filename, and expiration time
       const downloadUrl = new URL(window.location.origin);
       downloadUrl.pathname = '/download-helper.html';
-      downloadUrl.hash = `${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())}`;
+      downloadUrl.hash = `${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expirationTime.getTime().toString())}`;
       
       setQrUrl(downloadUrl.toString());
       return publicUrl;
@@ -146,6 +154,9 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
                   />
                   <p className="text-sm text-muted-foreground mt-4">
                     Scan this QR code with your phone to download the file
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Link expires in 5 minutes
                   </p>
                 </>
               ) : (
