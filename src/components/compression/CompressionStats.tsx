@@ -12,8 +12,12 @@ const CompressionStats: React.FC<CompressionStatsProps> = ({
   originalSize,
   compressedSize,
 }) => {
-  const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
-  const fileReduction = originalSize - compressedSize;
+  // Prevent division by zero and ensure positive values
+  const safeOriginalSize = Math.max(originalSize, 1);
+  const safeCompressedSize = Math.max(compressedSize, 0);
+  
+  const compressionRatio = Math.round((1 - safeCompressedSize / safeOriginalSize) * 100);
+  const fileReduction = safeOriginalSize - safeCompressedSize;
 
   return (
     <div className="space-y-3">

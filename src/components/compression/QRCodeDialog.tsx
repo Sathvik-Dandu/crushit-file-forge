@@ -3,7 +3,7 @@ import React from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { QrCode } from "lucide-react";
+import { QrCode, RefreshCw } from "lucide-react";
 
 interface QRCodeDialogProps {
   qrUrl: string;
@@ -68,14 +68,33 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = ({
                 <>
                   <p className="text-red-500">QR code could not be generated.</p>
                   <p className="text-sm mt-2 text-red-400">{qrError}</p>
+                  <Button 
+                    variant="outline"
+                    onClick={onGenerate}
+                    disabled={isGeneratingQr}
+                    className="mt-4 gap-2"
+                  >
+                    <RefreshCw size={16} className={isGeneratingQr ? "animate-spin" : ""} />
+                    Try Again
+                  </Button>
                 </>
               ) : isGeneratingQr ? (
                 <>
-                  <div className="spinner h-12 w-12 mx-auto mb-4 border-t-2 border-[#00ABE4] rounded-full animate-spin"></div>
+                  <div className="h-12 w-12 mx-auto mb-4 border-t-2 border-[#00ABE4] rounded-full animate-spin"></div>
                   <p className="text-muted-foreground">Generating QR code...</p>
                 </>
               ) : (
-                <p className="text-muted-foreground">Please try again.</p>
+                <>
+                  <p className="text-muted-foreground">Please try again.</p>
+                  <Button 
+                    variant="outline"
+                    onClick={onGenerate}
+                    className="mt-4 gap-2"
+                  >
+                    <RefreshCw size={16} />
+                    Retry
+                  </Button>
+                </>
               )}
             </div>
           )}

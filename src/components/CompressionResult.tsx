@@ -42,6 +42,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   const generateDownloadUrl = async () => {
     if (!user || !user.id) {
       toast.error("Please log in to upload files");
+      setQrError("You need to be logged in to generate a QR code.");
       return;
     }
     
@@ -57,7 +58,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       }
       
       const compressedFileAsFile = new File([compressedFile], getCompressedFileName(), {
-        type: compressedFile.type
+        type: compressedFile.type || 'application/octet-stream'
       });
       
       if (!supabase) {
@@ -69,6 +70,10 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
       console.log("File uploaded successfully, path:", path);
       console.log("Public URL:", publicUrl);
+      
+      if (!publicUrl) {
+        throw new Error("Failed to get public URL for the file");
+      }
       
       const expirationTime = new Date();
       expirationTime.setMinutes(expirationTime.getMinutes() + 5);
@@ -85,12 +90,26 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       return publicUrl;
     } catch (error) {
       console.error("Failed to generate download URL:", error);
-      setQrError(error instanceof Error ? error.message : "Unknown error occurred");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setQrError(errorMessage);
       toast.error("Failed to upload file. Please try again.");
       return null;
     } finally {
       setIsGeneratingQr(false);
     }
+  };
+
+  const handleQrButtonClick = () => {
+    // Only regenerate if not already generating or if previous attempt had an error
+    if (!isGeneratingQr) {
+      if (qrError) {
+        // Reset error state and try again
+        setQrError(null);
+      }
+      generateDownloadUrl();
+    }
+    // Always open the dialog, even if we're still generating
+    setIsQrDialogOpen(true);
   };
 
   return (
@@ -110,7 +129,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
           fileName={getCompressedFileName()}
           isGeneratingQr={isGeneratingQr}
           qrError={qrError}
-          onGenerate={generateDownloadUrl}
+          onGenerate={handleQrButtonClick}
           isOpen={isQrDialogOpen}
           onOpenChange={setIsQrDialogOpen}
         />
