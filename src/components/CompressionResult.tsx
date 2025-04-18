@@ -24,6 +24,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   onReset
 }) => {
   const [qrUrl, setQrUrl] = useState<string>("");
+  const [expirationTime, setExpirationTime] = useState<Date | null>(null);
   const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
   const fileReduction = originalSize - compressedSize;
   
@@ -39,9 +40,14 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     try {
       const url = URL.createObjectURL(compressedFile);
       
+      // Set expiration time to 5 minutes from now
+      const expiry = new Date();
+      expiry.setMinutes(expiry.getMinutes() + 5);
+      setExpirationTime(expiry);
+      
       // Create a full download URL that will trigger download when accessed directly
-      // This is what makes the QR code directly download the file when scanned
-      const downloadUrl = `${window.location.origin}/download-helper.html#${encodeURIComponent(url)},${encodeURIComponent(getCompressedFileName())}`;
+      // This includes the expiration timestamp
+      const downloadUrl = `${window.location.origin}/download-helper.html#${encodeURIComponent(url)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expiry.getTime().toString())}`;
       
       setQrUrl(downloadUrl);
       return url;
@@ -69,6 +75,16 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       console.error("Download failed:", error);
       toast.error("Download failed. Please try again.");
     }
+  };
+
+  // Format the expiration time
+  const formatExpirationTime = () => {
+    if (!expirationTime) return "";
+    
+    return expirationTime.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
 
   return (
@@ -116,7 +132,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
             <DialogHeader>
               <DialogTitle className="text-[#00ABE4]">Scan to Download</DialogTitle>
             </DialogHeader>
-            <div className="flex items-center justify-center p-6">
+            <div className="flex flex-col items-center justify-center p-6">
               <QRCodeSVG
                 value={qrUrl}
                 size={256}
@@ -125,6 +141,13 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
                 includeMargin
                 className="max-w-full h-auto"
               />
+              {expirationTime && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    This QR code will expire in 5 minutes (at {formatExpirationTime()})
+                  </p>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
