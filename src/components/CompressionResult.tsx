@@ -1,15 +1,14 @@
 
 import React, { useState } from "react";
-import { Download, Redo, QrCode } from "lucide-react";
+import { Redo } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { formatBytes } from "@/lib/utils";
-import { QRCodeSVG } from "qrcode.react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { uploadCompressedFile, setupFileExpiration, ensureCompressedFilesBucketExists } from "@/services/supabaseStorage";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import DownloadButton from "./compression/DownloadButton";
+import QRCodeDialog from "./compression/QRCodeDialog";
+import CompressionStats from "./compression/CompressionStats";
 
 interface CompressionResultProps {
   originalSize: number;
@@ -33,9 +32,6 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   
-  const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
-  const fileReduction = originalSize - compressedSize;
-  
   const getCompressedFileName = () => {
     const nameParts = fileName.split('.');
     const extension = nameParts.pop();
@@ -55,7 +51,6 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     try {
       console.log("Starting file upload process");
       
-      // Ensure bucket exists before uploading
       const bucketCreated = await ensureCompressedFilesBucketExists();
       if (!bucketCreated) {
         throw new Error("Could not create or access storage bucket");
@@ -65,25 +60,21 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
         type: compressedFile.type
       });
       
-      // Check if Supabase is properly initialized
       if (!supabase) {
         console.error("Supabase client is not initialized");
         throw new Error("Storage service is not available");
       }
       
-      // Upload the file to Supabase
       console.log("Uploading file to Supabase");
       const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
       console.log("File uploaded successfully, path:", path);
       console.log("Public URL:", publicUrl);
       
-      // Set up automatic file expiration (5 minutes)
       const expirationTime = new Date();
       expirationTime.setMinutes(expirationTime.getMinutes() + 5);
       await setupFileExpiration(path, 5);
       console.log("File expiration set to:", expirationTime.toISOString());
       
-      // Create the download URL with the file URL, filename, and expiration time
       const downloadUrl = new URL(window.location.origin);
       downloadUrl.pathname = '/download-helper.html';
       downloadUrl.hash = `${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expirationTime.getTime().toString())}`;
@@ -102,25 +93,6 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     }
   };
 
-  const downloadFile = () => {
-    try {
-      const url = URL.createObjectURL(compressedFile);
-      const link = document.createElement('a');
-      
-      link.href = url;
-      link.download = getCompressedFileName();
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      toast.success("Download started successfully");
-    } catch (error) {
-      console.error("Download failed:", error);
-      toast.error("Download failed. Please try again.");
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4 w-full border rounded-lg p-6 bg-white">
       <div className="text-center mb-2">
@@ -128,86 +100,20 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
         <p className="text-muted-foreground">Your file has been compressed successfully</p>
       </div>
       
-      <div className="space-y-3">
-        <div className="flex justify-between text-sm">
-          <span>Original size: {formatBytes(originalSize)}</span>
-          <span>Compressed size: {formatBytes(compressedSize)}</span>
-        </div>
-        
-        <Progress value={compressionRatio} className="h-2 bg-[#E9F1FA]" />
-        
-        <div className="flex justify-between text-sm">
-          <span>Compression ratio: {compressionRatio}%</span>
-          <span className="text-[#00ABE4]">Saved {formatBytes(fileReduction)}</span>
-        </div>
-      </div>
+      <CompressionStats originalSize={originalSize} compressedSize={compressedSize} />
       
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-        <Button 
-          onClick={downloadFile}
-          className="gap-2 bg-[#00ABE4] hover:bg-[#00ABE4]/90"
-        >
-          <Download size={18} />
-          Download
-        </Button>
+        <DownloadButton compressedFile={compressedFile} fileName={fileName} />
 
-        <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              variant="outline"
-              onClick={generateDownloadUrl}
-              disabled={isGeneratingQr}
-              className="gap-2 border-[#00ABE4] text-[#00ABE4] hover:bg-[#E9F1FA]"
-            >
-              <QrCode size={18} />
-              {isGeneratingQr ? 'Generating...' : 'QR Code'}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md bg-white">
-            <DialogHeader>
-              <DialogTitle className="text-[#00ABE4]">Scan to Download</DialogTitle>
-              <DialogDescription>
-                {qrUrl ? 'Scan this QR code with your phone to download the file' : 'Generating QR code...'}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col items-center justify-center p-6">
-              {qrUrl ? (
-                <>
-                  <QRCodeSVG
-                    value={qrUrl}
-                    size={256}
-                    level="H"
-                    fgColor="#00ABE4"
-                    includeMargin
-                    className="max-w-full h-auto"
-                  />
-                  <p className="text-sm text-muted-foreground mt-4">
-                    File: {getCompressedFileName()}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Link expires in 5 minutes
-                  </p>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  {qrError ? (
-                    <>
-                      <p className="text-red-500">QR code could not be generated.</p>
-                      <p className="text-sm mt-2 text-red-400">{qrError}</p>
-                    </>
-                  ) : isGeneratingQr ? (
-                    <>
-                      <div className="spinner h-12 w-12 mx-auto mb-4 border-t-2 border-[#00ABE4] rounded-full animate-spin"></div>
-                      <p className="text-muted-foreground">Generating QR code...</p>
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground">Please try again.</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <QRCodeDialog
+          qrUrl={qrUrl}
+          fileName={getCompressedFileName()}
+          isGeneratingQr={isGeneratingQr}
+          qrError={qrError}
+          onGenerate={generateDownloadUrl}
+          isOpen={isQrDialogOpen}
+          onOpenChange={setIsQrDialogOpen}
+        />
         
         <Button 
           variant="outline" 
