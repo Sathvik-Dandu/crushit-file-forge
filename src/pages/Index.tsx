@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import FileUploadZone from "@/components/FileUploadZone";
@@ -81,8 +80,7 @@ const Index = () => {
     return (
       <Layout>
         <div className="max-w-md mx-auto mt-8">
-          <SimpleLogin onLogin={(userData) => {
-            // Handle login through the SimpleLogin component
+          <SimpleLogin onLogin={() => {
             setShowLoginModal(false);
             navigate('/');
           }} />
