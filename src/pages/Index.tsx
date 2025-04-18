@@ -10,6 +10,8 @@ import UserHistory from "@/components/UserHistory";
 import { mockCompressFile, generateMockHistory } from "@/lib/utils";
 import { CompressionHistoryItem } from "@/components/UserHistory";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   // File states
@@ -18,8 +20,9 @@ const Index = () => {
   const [compressedSize, setCompressedSize] = useState<number | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   
-  // User states
-  const [user, setUser] = useState<{ id: string; email: string; name: string } | null>(null);
+  // Use AuthContext instead of local user state
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [history, setHistory] = useState<CompressionHistoryItem[]>([]);
   
@@ -73,51 +76,23 @@ const Index = () => {
     setCompressedSize(null);
   };
   
-  const handleLogin = (userData: { email: string; name: string }) => {
-    // Add a unique ID for the user (in a real app, this would come from authentication)
-    setUser({
-      id: `user-${Date.now()}`,
-      email: userData.email,
-      name: userData.name
-    });
-    setShowLoginModal(false);
-  };
-  
-  const handleLogout = () => {
-    setUser(null);
-    setHistory([]);
-  };
-  
-  const handleDownloadHistory = (id: string) => {
-    // In a real app, this would download the stored file
-    // For now, we'll just log the action
-    console.log(`Downloading file with id ${id}`);
-  };
-  
-  const handleDeleteHistory = (id: string) => {
-    setHistory(history.filter(item => item.id !== id));
-  };
-  
   // Render login modal
   if (showLoginModal) {
     return (
-      <Layout 
-        user={user} 
-        onLogout={handleLogout}
-      >
+      <Layout>
         <div className="max-w-md mx-auto mt-8">
-          <SimpleLogin onLogin={handleLogin} />
+          <SimpleLogin onLogin={(userData) => {
+            // Handle login through the SimpleLogin component
+            setShowLoginModal(false);
+            navigate('/');
+          }} />
         </div>
       </Layout>
     );
   }
   
   return (
-    <Layout 
-      user={user} 
-      onLogout={handleLogout}
-      onLogin={() => setShowLoginModal(true)}
-    >
+    <Layout>
       {user ? (
         <Tabs defaultValue="compress" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
@@ -185,8 +160,8 @@ const Index = () => {
           <TabsContent value="history" className="space-y-8">
             <UserHistory 
               history={history}
-              onDownload={handleDownloadHistory}
-              onDelete={handleDeleteHistory}
+              onDownload={(id) => handleDownloadHistory(id)}
+              onDelete={(id) => handleDeleteHistory(id)}
             />
           </TabsContent>
         </Tabs>
@@ -270,7 +245,7 @@ const Index = () => {
                   </ul>
                   
                   <button
-                    onClick={() => setShowLoginModal(true)}
+                    onClick={() => navigate('/auth')}
                     className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
                   >
                     Login or Create Account
@@ -283,6 +258,16 @@ const Index = () => {
       )}
     </Layout>
   );
+  
+  // Add missing functions
+  function handleDownloadHistory(id: string) {
+    // In a real app, this would download the stored file
+    console.log(`Downloading file with id ${id}`);
+  }
+  
+  function handleDeleteHistory(id: string) {
+    setHistory(history.filter(item => item.id !== id));
+  }
 };
 
 export default Index;
