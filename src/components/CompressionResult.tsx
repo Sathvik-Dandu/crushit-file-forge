@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
-import { uploadCompressedFile, setupFileExpiration } from "@/services/supabaseStorage";
+import { uploadCompressedFile, setupFileExpiration, ensureCompressedFilesBucketExists } from "@/services/supabaseStorage";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,6 +31,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   const [qrUrl, setQrUrl] = useState<string>("");
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
   
   const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
   const fileReduction = originalSize - compressedSize;
@@ -49,9 +50,17 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     }
     
     setIsGeneratingQr(true);
+    setQrError(null);
     
     try {
       console.log("Starting file upload process");
+      
+      // Ensure bucket exists before uploading
+      const bucketCreated = await ensureCompressedFilesBucketExists();
+      if (!bucketCreated) {
+        throw new Error("Could not create or access storage bucket");
+      }
+      
       const compressedFileAsFile = new File([compressedFile], getCompressedFileName(), {
         type: compressedFile.type
       });
@@ -59,8 +68,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       // Check if Supabase is properly initialized
       if (!supabase) {
         console.error("Supabase client is not initialized");
-        toast.error("Storage service is not available");
-        return;
+        throw new Error("Storage service is not available");
       }
       
       // Upload the file to Supabase
@@ -73,7 +81,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       const expirationTime = new Date();
       expirationTime.setMinutes(expirationTime.getMinutes() + 5);
       await setupFileExpiration(path, 5);
-      console.log("File expiration set to:", expirationTime);
+      console.log("File expiration set to:", expirationTime.toISOString());
       
       // Create the download URL with the file URL, filename, and expiration time
       const downloadUrl = new URL(window.location.origin);
@@ -86,6 +94,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       return publicUrl;
     } catch (error) {
       console.error("Failed to generate download URL:", error);
+      setQrError(error instanceof Error ? error.message : "Unknown error occurred");
       toast.error("Failed to upload file. Please try again.");
       return null;
     } finally {
@@ -157,6 +166,9 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
           <DialogContent className="sm:max-w-md bg-white">
             <DialogHeader>
               <DialogTitle className="text-[#00ABE4]">Scan to Download</DialogTitle>
+              <DialogDescription>
+                {qrUrl ? 'Scan this QR code with your phone to download the file' : 'Generating QR code...'}
+              </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center p-6">
               {qrUrl ? (
@@ -170,7 +182,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
                     className="max-w-full h-auto"
                   />
                   <p className="text-sm text-muted-foreground mt-4">
-                    Scan this QR code with your phone to download the file
+                    File: {getCompressedFileName()}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Link expires in 5 minutes
@@ -178,8 +190,19 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
                 </>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">QR code could not be generated.</p>
-                  <p className="text-sm mt-2">Please try again.</p>
+                  {qrError ? (
+                    <>
+                      <p className="text-red-500">QR code could not be generated.</p>
+                      <p className="text-sm mt-2 text-red-400">{qrError}</p>
+                    </>
+                  ) : isGeneratingQr ? (
+                    <>
+                      <div className="spinner h-12 w-12 mx-auto mb-4 border-t-2 border-[#00ABE4] rounded-full animate-spin"></div>
+                      <p className="text-muted-foreground">Generating QR code...</p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Please try again.</p>
+                  )}
                 </div>
               )}
             </div>

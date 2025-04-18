@@ -16,6 +16,39 @@ function checkSupabaseConfig() {
   }
 }
 
+// Ensure the compressed-files bucket exists
+export async function ensureCompressedFilesBucketExists() {
+  checkSupabaseConfig();
+  
+  try {
+    // Check if bucket exists
+    const { data: buckets } = await supabase!.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === 'compressed-files');
+    
+    if (!bucketExists) {
+      console.log('Creating compressed-files bucket');
+      const { error } = await supabase!.storage.createBucket('compressed-files', {
+        public: true,
+        allowedMimeTypes: ['*/*'],
+        fileSizeLimit: 50 * 1024 * 1024 // 50MB
+      });
+      
+      if (error) {
+        console.error('Failed to create bucket:', error);
+        throw error;
+      }
+      console.log('Bucket created successfully');
+    } else {
+      console.log('Bucket already exists');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error ensuring bucket exists:', error);
+    return false;
+  }
+}
+
 // Function to upload file to Supabase storage
 export async function uploadCompressedFile(
   file: File, 
@@ -23,19 +56,13 @@ export async function uploadCompressedFile(
 ): Promise<{ path: string; publicUrl: string }> {
   checkSupabaseConfig();
   
-  // Create bucket if it doesn't exist (this will fail silently if bucket already exists)
-  try {
-    await supabase!.storage.createBucket('compressed-files', {
-      public: true,
-      allowedMimeTypes: ['*/*'],
-      fileSizeLimit: 50 * 1024 * 1024 // 50MB
-    });
-  } catch (error) {
-    console.log('Bucket already exists or could not be created:', error);
-  }
+  // Ensure the bucket exists
+  await ensureCompressedFilesBucketExists();
   
   const fileName = `compressed_${Date.now()}_${file.name}`;
   const filePath = `user_files/${userId}/${fileName}`;
+  
+  console.log(`Uploading file to path: ${filePath}`);
   
   const { data, error } = await supabase!.storage
     .from('compressed-files')
@@ -44,11 +71,18 @@ export async function uploadCompressedFile(
       upsert: false
     });
   
-  if (error) throw error;
+  if (error) {
+    console.error('Upload error:', error);
+    throw error;
+  }
+  
+  console.log('File uploaded successfully, path:', data?.path);
   
   const { data: urlData } = supabase!.storage
     .from('compressed-files')
     .getPublicUrl(filePath);
+  
+  console.log('Generated public URL:', urlData.publicUrl);
   
   return {
     path: filePath,
@@ -73,14 +107,21 @@ export async function getFileDownloadUrl(
 export async function deleteFileFromStorage(filePath: string): Promise<void> {
   checkSupabaseConfig();
   
+  console.log(`Deleting file: ${filePath}`);
+  
   const { error } = await supabase!.storage
     .from('compressed-files')
     .remove([filePath]);
   
-  if (error) throw error;
+  if (error) {
+    console.error('Delete error:', error);
+    throw error;
+  }
+  
+  console.log(`File ${filePath} deleted successfully`);
 }
 
-// Set up automatic file deletion after expiration
+// Set up automatic file expiration after expiration
 export async function setupFileExpiration(filePath: string, expirationMinutes: number = 5): Promise<void> {
   // This is a simple implementation - in a production app, you might want to use a more robust solution
   console.log(`Setting up expiration for ${filePath} in ${expirationMinutes} minutes`);
