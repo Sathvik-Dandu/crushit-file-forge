@@ -56,6 +56,10 @@
     .button:hover {
       background-color: #0090c5;
     }
+    .button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
     .expired-message {
       color: #ff5555;
       font-weight: bold;
@@ -76,32 +80,43 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      console.log("Download helper page loaded");
+      
       // Get the hash from the URL (removes the # character)
       const hash = window.location.hash.substring(1);
+      console.log("URL hash:", hash);
       
       if (hash) {
         const parts = hash.split(',');
+        console.log("Hash parts:", parts);
+        
         if (parts.length === 3) {
           const blobUrl = decodeURIComponent(parts[0]);
           const fileName = decodeURIComponent(parts[1]);
           const expirationTime = parseInt(decodeURIComponent(parts[2]), 10);
           const currentTime = Date.now();
           
+          console.log("Blob URL:", blobUrl);
+          console.log("File name:", fileName);
+          console.log("Expiration time:", new Date(expirationTime).toLocaleString());
+          console.log("Current time:", new Date(currentTime).toLocaleString());
+          
           document.getElementById('file-name').textContent = `File: ${fileName}`;
           
           // Check if the link has expired
           if (currentTime > expirationTime) {
+            console.log("Link has expired");
             document.getElementById('expired-message').style.display = 'block';
             document.getElementById('file-name').style.display = 'none';
             document.querySelector('.spinner').style.display = 'none';
             document.getElementById('manual-download').disabled = true;
-            document.getElementById('manual-download').style.opacity = '0.5';
             return;
           }
           
           // Function to trigger download
           const downloadFile = () => {
             try {
+              console.log("Starting download for:", fileName);
               // For PDFs and other document types, use a different approach
               const a = document.createElement('a');
               a.href = blobUrl;
@@ -112,6 +127,7 @@
               
               // Show success message
               document.getElementById('file-name').textContent = `Download started for: ${fileName}`;
+              console.log("Download initiated successfully");
             } catch (error) {
               console.error('Download failed:', error);
               document.getElementById('file-name').textContent = 'Download failed. Please try again.';
@@ -130,11 +146,11 @@
             const remainingTime = expirationTime - now;
             
             if (remainingTime <= 0) {
+              console.log("Link has expired during countdown");
               document.getElementById('expired-message').style.display = 'block';
               document.getElementById('file-name').style.display = 'none';
               document.querySelector('.spinner').style.display = 'none';
               document.getElementById('manual-download').disabled = true;
-              document.getElementById('manual-download').style.opacity = '0.5';
               clearInterval(countdownInterval);
             } else {
               const minutes = Math.floor(remainingTime / 60000);
@@ -147,8 +163,12 @@
           // Update countdown every second
           updateCountdown();
           const countdownInterval = setInterval(updateCountdown, 1000);
+        } else {
+          console.error("Invalid hash format, expected 3 parts but got:", parts.length);
+          document.getElementById('file-name').textContent = 'Invalid file information provided.';
         }
       } else {
+        console.error("No hash found in URL");
         document.getElementById('file-name').textContent = 'No file information provided.';
       }
     });

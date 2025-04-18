@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "@/components/ui/sonner";
 import { uploadCompressedFile, setupFileExpiration } from "@/services/supabaseStorage";
 import { User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CompressionResultProps {
   originalSize: number;
@@ -29,6 +30,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
 }) => {
   const [qrUrl, setQrUrl] = useState<string>("");
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   
   const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100);
   const fileReduction = originalSize - compressedSize;
@@ -49,28 +51,43 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     setIsGeneratingQr(true);
     
     try {
+      console.log("Starting file upload process");
       const compressedFileAsFile = new File([compressedFile], getCompressedFileName(), {
         type: compressedFile.type
       });
       
+      // Check if Supabase is properly initialized
+      if (!supabase) {
+        console.error("Supabase client is not initialized");
+        toast.error("Storage service is not available");
+        return;
+      }
+      
       // Upload the file to Supabase
+      console.log("Uploading file to Supabase");
       const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
+      console.log("File uploaded successfully, path:", path);
+      console.log("Public URL:", publicUrl);
       
       // Set up automatic file expiration (5 minutes)
       const expirationTime = new Date();
       expirationTime.setMinutes(expirationTime.getMinutes() + 5);
       await setupFileExpiration(path, 5);
+      console.log("File expiration set to:", expirationTime);
       
       // Create the download URL with the file URL, filename, and expiration time
       const downloadUrl = new URL(window.location.origin);
       downloadUrl.pathname = '/download-helper.html';
       downloadUrl.hash = `${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expirationTime.getTime().toString())}`;
       
+      console.log("Generated download URL:", downloadUrl.toString());
       setQrUrl(downloadUrl.toString());
+      setIsQrDialogOpen(true);
       return publicUrl;
     } catch (error) {
       console.error("Failed to generate download URL:", error);
       toast.error("Failed to upload file. Please try again.");
+      return null;
     } finally {
       setIsGeneratingQr(false);
     }
@@ -125,7 +142,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
           Download
         </Button>
 
-        <Dialog>
+        <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
           <DialogTrigger asChild>
             <Button 
               variant="outline"
