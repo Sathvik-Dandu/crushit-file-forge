@@ -52,9 +52,15 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     try {
       console.log("Starting file upload process");
       
-      const bucketCreated = await ensureCompressedFilesBucketExists();
-      if (!bucketCreated) {
-        throw new Error("Could not create or access storage bucket");
+      try {
+        // Explicitly test bucket access before trying to upload
+        const bucketCreated = await ensureCompressedFilesBucketExists();
+        if (!bucketCreated) {
+          throw new Error("Could not create or access storage bucket");
+        }
+      } catch (bucketError) {
+        console.error("Error with storage bucket:", bucketError);
+        throw bucketError;
       }
       
       const compressedFileAsFile = new File([compressedFile], getCompressedFileName(), {

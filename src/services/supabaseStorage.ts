@@ -22,7 +22,13 @@ export async function ensureCompressedFilesBucketExists() {
   
   try {
     // Check if bucket exists
-    const { data: buckets } = await supabase!.storage.listBuckets();
+    const { data: buckets, error: listError } = await supabase!.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Failed to list buckets:', listError);
+      throw new Error(`Failed to list storage buckets: ${listError.message}`);
+    }
+    
     const bucketExists = buckets?.some(bucket => bucket.name === 'compressed-files');
     
     if (!bucketExists) {
@@ -35,17 +41,30 @@ export async function ensureCompressedFilesBucketExists() {
       
       if (error) {
         console.error('Failed to create bucket:', error);
-        throw error;
+        if (error.message.includes('already exists')) {
+          // If the error is because the bucket already exists, we can continue
+          console.log('Bucket already exists (from error)');
+          return true;
+        }
+        throw new Error(`Failed to create storage bucket: ${error.message}`);
       }
       console.log('Bucket created successfully');
     } else {
       console.log('Bucket already exists');
     }
     
+    // Verify bucket is accessible by trying to list objects
+    const { error: testError } = await supabase!.storage.from('compressed-files').list();
+    if (testError) {
+      console.error('Bucket exists but cannot be accessed:', testError);
+      throw new Error(`Bucket exists but cannot be accessed: ${testError.message}`);
+    }
+    
     return true;
   } catch (error) {
     console.error('Error ensuring bucket exists:', error);
-    return false;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not create or access storage bucket: ${errorMessage}`);
   }
 }
 
@@ -73,7 +92,7 @@ export async function uploadCompressedFile(
   
   if (error) {
     console.error('Upload error:', error);
-    throw error;
+    throw new Error(`Failed to upload file: ${error.message}`);
   }
   
   console.log('File uploaded successfully, path:', data?.path);
@@ -81,6 +100,10 @@ export async function uploadCompressedFile(
   const { data: urlData } = supabase!.storage
     .from('compressed-files')
     .getPublicUrl(filePath);
+  
+  if (!urlData || !urlData.publicUrl) {
+    throw new Error('Failed to get public URL for the uploaded file');
+  }
   
   console.log('Generated public URL:', urlData.publicUrl);
   
@@ -100,6 +123,10 @@ export async function getFileDownloadUrl(
     .from('compressed-files')
     .getPublicUrl(filePath);
   
+  if (!data || !data.publicUrl) {
+    throw new Error('Failed to get public URL for the file');
+  }
+  
   return data.publicUrl;
 }
 
@@ -115,7 +142,7 @@ export async function deleteFileFromStorage(filePath: string): Promise<void> {
   
   if (error) {
     console.error('Delete error:', error);
-    throw error;
+    throw new Error(`Failed to delete file: ${error.message}`);
   }
   
   console.log(`File ${filePath} deleted successfully`);
