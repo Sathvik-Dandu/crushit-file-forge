@@ -2,20 +2,27 @@
 import React from "react";
 import { LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface LayoutProps {
   children: React.ReactNode;
-  user?: { email: string; name: string } | null;
-  onLogout?: () => void;
-  onLogin?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ 
-  children, 
-  user, 
-  onLogout,
-  onLogin
-}) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Successfully signed out");
+    } catch (error) {
+      toast.error("Failed to sign out");
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b">
@@ -36,15 +43,15 @@ const Layout: React.FC<LayoutProps> = ({
                   <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                     <User size={18} />
                   </div>
-                  <span className="text-sm font-medium hidden sm:block">{user.name}</span>
+                  <span className="text-sm font-medium hidden sm:block">{user.email}</span>
                 </div>
                 
-                <Button variant="ghost" size="icon" onClick={onLogout} title="Logout">
+                <Button variant="ghost" size="icon" onClick={handleSignOut} title="Logout">
                   <LogOut size={18} />
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" onClick={onLogin}>
+              <Button variant="outline" onClick={() => navigate("/auth")}>
                 Log In
               </Button>
             )}
