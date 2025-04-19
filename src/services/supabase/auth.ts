@@ -1,5 +1,5 @@
 
-import { Session } from '@supabase/supabase-js';
+import { Session, createClient } from '@supabase/supabase-js';
 import { supabase as globalSupabase } from "@/integrations/supabase/client";
 
 // Initialize Supabase client with fallback values if env vars are not available
