@@ -1,10 +1,12 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { QrCode, RefreshCw, LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/components/ui/sonner";
 
 interface QRCodeDialogProps {
   qrUrl: string;
@@ -26,11 +28,24 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = ({
   onOpenChange,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const handleLoginClick = () => {
     onOpenChange(false); // Close the dialog
     navigate('/auth'); // Navigate to auth page
   };
+  
+  // Check if user is logged in before generating QR code
+  useEffect(() => {
+    if (isOpen && !user && !qrUrl && !qrError) {
+      toast.error("Please log in to generate QR codes", {
+        action: {
+          label: "Login",
+          onClick: handleLoginClick
+        }
+      });
+    }
+  }, [isOpen, user, qrUrl, qrError]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
