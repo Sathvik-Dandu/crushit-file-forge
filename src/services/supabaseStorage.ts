@@ -16,31 +16,61 @@ function checkSupabaseConfig() {
   }
 }
 
-// Check if the user is logged in
+// Check if the user is logged in and return the session
 async function checkUserAuthentication() {
   const { data: { session } } = await supabase!.auth.getSession();
   if (!session) {
     throw new Error('You need to be logged in to use this feature.');
   }
-  return session.user;
+  return session;
 }
 
-// Ensure the compressed-files bucket exists
+// Get current user role if applicable
+async function getUserRole() {
+  try {
+    const { data: { session } } = await supabase!.auth.getSession();
+    if (!session) return null;
+    
+    const { data, error } = await supabase!
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching user role:', error);
+      return null;
+    }
+    
+    return data?.role || null;
+  } catch (error) {
+    console.error('Error in getUserRole:', error);
+    return null;
+  }
+}
+
+// Ensure the compressed-files bucket exists or create it
 export async function ensureCompressedFilesBucketExists() {
   checkSupabaseConfig();
   
   try {
-    // Check if user is authenticated first
-    await checkUserAuthentication();
+    // First verify authentication
+    const session = await checkUserAuthentication();
+    console.log('User authenticated:', session.user.email);
     
-    // First try to list files in the bucket to check if it exists and we have access
+    // Try to list buckets to check permissions
     const { data: bucketList, error: listError } = await supabase!.storage.listBuckets();
     
     if (listError) {
       console.error('Error listing buckets:', listError);
+      
+      // Handle different error cases
       if (listError.message.includes('JWT') || listError.message.includes('token') || listError.message.includes('auth')) {
         throw new Error('Authentication required: Please log in to access storage');
+      } else if (listError.message.includes('permission') || listError.message.includes('not authorized')) {
+        throw new Error('Permission denied: Your account does not have access to storage. Please contact support.');
       }
+      
       throw new Error(`Cannot access storage: ${listError.message}`);
     }
     
@@ -52,19 +82,22 @@ export async function ensureCompressedFilesBucketExists() {
       return true;
     }
     
-    // If bucket doesn't exist, create it
+    // If bucket doesn't exist, try to create it with public access
     console.log('Bucket not found, attempting to create');
     const { data: newBucket, error: createError } = await supabase!.storage.createBucket('compressed-files', {
-      public: true,
+      public: true, // Make bucket public
       fileSizeLimit: 50 * 1024 * 1024 // 50MB
     });
     
     if (createError) {
       console.error('Failed to create bucket:', createError);
       
-      // Provide more specific error messages
+      // Provide specific error messages based on the error type
       if (createError.message.includes('row-level security') || createError.message.includes('permission')) {
-        throw new Error('Permission denied: You need to be logged in to create storage buckets');
+        throw new Error('Permission denied: Your account does not have permission to create storage buckets. Please contact an administrator.');
+      } else if (createError.message.includes('already exists')) {
+        console.log('Bucket already exists but was not detected in the list');
+        return true;
       }
       
       throw new Error(`Failed to create storage bucket: ${createError.message}`);
@@ -87,7 +120,7 @@ export async function uploadCompressedFile(
   checkSupabaseConfig();
   
   // Verify authentication before continuing
-  await checkUserAuthentication();
+  const session = await checkUserAuthentication();
   
   // Check if bucket is accessible before attempting upload
   console.log('Checking bucket access before upload');

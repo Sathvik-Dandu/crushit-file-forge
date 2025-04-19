@@ -52,7 +52,19 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = ({
       <DialogTrigger asChild>
         <Button 
           variant="outline"
-          onClick={onGenerate}
+          onClick={(e) => {
+            e.preventDefault();
+            if (!user) {
+              toast.error("Please log in to generate QR codes", {
+                action: {
+                  label: "Login",
+                  onClick: handleLoginClick
+                }
+              });
+              return;
+            }
+            onGenerate();
+          }}
           disabled={isGeneratingQr}
           className="gap-2 border-[#00ABE4] text-[#00ABE4] hover:bg-[#E9F1FA]"
         >
