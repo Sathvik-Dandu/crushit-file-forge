@@ -41,7 +41,7 @@ export const generateDownloadUrl = async ({
   const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
   console.log("File uploaded successfully, path:", path);
   
-  // Save to history
+  // Save to history - ensure the field names match our CompressionHistoryItem interface
   const historyItem = {
     userId: user.id,
     fileName,
@@ -69,4 +69,3 @@ export const generateDownloadUrl = async ({
   
   return downloadUrl.toString();
 };
-
