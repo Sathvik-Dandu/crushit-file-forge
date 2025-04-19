@@ -12,26 +12,28 @@ interface CompressSectionProps {
 }
 
 const CompressSection: React.FC<CompressSectionProps> = ({ user }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [compressedFile, setCompressedFile] = useState<Blob | null>(null);
-  const [compressedSize, setCompressedSize] = useState<number | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [compressedFiles, setCompressedFiles] = useState<{ file: Blob, size: number }[]>([]);
   const [isCompressing, setIsCompressing] = useState(false);
 
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    setCompressedFile(null);
-    setCompressedSize(null);
+  const handleFileSelect = (files: FileList) => {
+    setSelectedFiles(Array.from(files));
+    setCompressedFiles([]);
   };
 
   const handleCompress = async (targetSize: number, compressionLevel: number) => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
     
     setIsCompressing(true);
     
     try {
-      const result = await mockCompressFile(selectedFile, targetSize, compressionLevel);
-      setCompressedFile(result.blob);
-      setCompressedSize(result.size);
+      const compressedResults = await Promise.all(
+        selectedFiles.map(async (file) => {
+          const result = await mockCompressFile(file, targetSize, compressionLevel);
+          return { file: result.blob, size: result.size };
+        })
+      );
+      setCompressedFiles(compressedResults);
     } catch (error) {
       console.error('Compression failed:', error);
     } finally {
@@ -40,37 +42,42 @@ const CompressSection: React.FC<CompressSectionProps> = ({ user }) => {
   };
 
   const handleReset = () => {
-    setSelectedFile(null);
-    setCompressedFile(null);
-    setCompressedSize(null);
+    setSelectedFiles([]);
+    setCompressedFiles([]);
   };
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold">Upload File</h2>
+          <h2 className="text-2xl font-bold">Upload Files</h2>
           <p className="text-muted-foreground">
-            Select any file to compress. We support PDFs, Office documents, images, and more.
+            Select any files to compress. We support PDFs, Office documents, images, and more.
           </p>
         </div>
         
-        {!selectedFile || compressedFile ? (
+        {selectedFiles.length === 0 || compressedFiles.length > 0 ? (
           <FileUploadZone onFileSelect={handleFileSelect} />
         ) : (
           <>
-            <FileDetails
-              file={selectedFile}
-              compressedSize={compressedSize || undefined}
-            />
+            <div className="space-y-4">
+              {selectedFiles.map((file, index) => (
+                <FileDetails
+                  key={`${file.name}-${index}`}
+                  file={file}
+                  compressedSize={compressedFiles[index]?.size}
+                />
+              ))}
+            </div>
+            
             {isCompressing ? (
               <div className="text-center p-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="mt-2 text-muted-foreground">Compressing your file...</p>
+                <p className="mt-2 text-muted-foreground">Compressing your files...</p>
               </div>
             ) : (
               <CompressionControls
-                originalSize={selectedFile.size}
+                originalSize={selectedFiles.reduce((acc, file) => acc + file.size, 0)}
                 onCompress={handleCompress}
               />
             )}
@@ -79,23 +86,26 @@ const CompressSection: React.FC<CompressSectionProps> = ({ user }) => {
       </div>
       
       <div className="space-y-6">
-        {compressedFile && compressedSize !== null && selectedFile && (
+        {compressedFiles.length > 0 && selectedFiles.length > 0 && (
           <>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Compression Result</h2>
+              <h2 className="text-2xl font-bold">Compression Results</h2>
               <p className="text-muted-foreground">
-                Your file has been compressed and is ready for download.
+                Your files have been compressed and are ready for download.
               </p>
             </div>
             
-            <CompressionResult
-              originalSize={selectedFile.size}
-              compressedSize={compressedSize}
-              fileName={selectedFile.name}
-              compressedFile={compressedFile}
-              onReset={handleReset}
-              user={user}
-            />
+            {selectedFiles.map((file, index) => (
+              <CompressionResult
+                key={`${file.name}-${index}`}
+                originalSize={file.size}
+                compressedSize={compressedFiles[index].size}
+                fileName={file.name}
+                compressedFile={compressedFiles[index].file}
+                onReset={handleReset}
+                user={user}
+              />
+            ))}
           </>
         )}
       </div>

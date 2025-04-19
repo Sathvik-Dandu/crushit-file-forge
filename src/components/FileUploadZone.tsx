@@ -1,11 +1,11 @@
 
 import React, { useState, useCallback } from "react";
-import { Upload, X } from "lucide-react";
+import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface FileUploadZoneProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (files: FileList) => void;
   className?: string;
 }
 
@@ -27,13 +27,13 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, className
     setIsDragging(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onFileSelect(e.dataTransfer.files[0]);
+      onFileSelect(e.dataTransfer.files);
     }
   }, [onFileSelect]);
   
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onFileSelect(e.target.files[0]);
+      onFileSelect(e.target.files);
     }
   }, [onFileSelect]);
 
@@ -52,16 +52,17 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileSelect, className
         type="file"
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         onChange={handleFileInput}
+        multiple
       />
       
       <div className="flex flex-col items-center gap-2">
         <div className="p-4 rounded-full bg-primary/10">
           <Upload className="h-8 w-8 text-primary" />
         </div>
-        <h3 className="text-lg font-medium mt-2">Drag & drop your file here</h3>
+        <h3 className="text-lg font-medium mt-2">Drag & drop your files here</h3>
         <p className="text-sm text-muted-foreground mb-3">or click to browse files</p>
         <Button variant="outline" type="button" className="relative z-10">
-          Select File
+          Select Files
         </Button>
       </div>
     </div>

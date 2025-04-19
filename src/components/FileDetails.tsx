@@ -43,7 +43,10 @@ const FileDetails: React.FC<FileDetailsProps> = ({ file, compressedSize, classNa
   };
 
   return (
-    <div className={cn("flex items-center p-4 border rounded-lg", className)}>
+    <div className={cn(
+      "flex items-center p-4 border rounded-lg transition-colors hover:bg-muted/30",
+      className
+    )}>
       <div className="flex-shrink-0 mr-4">
         {getFileIcon()}
       </div>
@@ -53,16 +56,16 @@ const FileDetails: React.FC<FileDetailsProps> = ({ file, compressedSize, classNa
           {file.name}
         </h3>
         
-        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           <span>{file.type || "Unknown type"}</span>
-          <span className="hidden sm:inline">•</span>
+          <span>•</span>
           <span>Original: {formatBytes(file.size)}</span>
           
           {compressedSize && (
             <>
-              <span className="hidden sm:inline">•</span>
+              <span>•</span>
               <span>Compressed: {formatBytes(compressedSize)}</span>
-              <span className="hidden sm:inline">•</span>
+              <span>•</span>
               <span className="text-green-600 font-medium">
                 {getCompressionRatio()}% reduction
               </span>
