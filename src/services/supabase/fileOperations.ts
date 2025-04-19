@@ -2,6 +2,7 @@
 import { checkSupabaseConfig, checkUserAuthentication } from './auth';
 import { ensureCompressedFilesBucketExists } from './bucketManagement';
 import { supabase } from './auth';
+import { CompressionHistoryItem } from '@/components/UserHistory';
 
 // Function to upload file to Supabase storage
 export async function uploadCompressedFile(
@@ -53,6 +54,89 @@ export async function uploadCompressedFile(
     path: filePath,
     publicUrl: urlData.publicUrl
   };
+}
+
+// Function to save compression history item
+export async function saveCompressionHistory(
+  historyItem: Omit<CompressionHistoryItem, 'id'>
+): Promise<CompressionHistoryItem | null> {
+  checkSupabaseConfig();
+  
+  try {
+    console.log('Saving compression history item:', historyItem);
+    
+    const { data, error } = await supabase!
+      .from('compression_history')
+      .insert([historyItem])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Failed to save compression history:', error);
+      return null;
+    }
+    
+    console.log('Compression history saved successfully:', data);
+    return data as CompressionHistoryItem;
+  } catch (error) {
+    console.error('Error saving compression history:', error);
+    return null;
+  }
+}
+
+// Function to get compression history for a user
+export async function getCompressionHistory(
+  userId: string
+): Promise<CompressionHistoryItem[]> {
+  checkSupabaseConfig();
+  
+  try {
+    console.log('Getting compression history for user:', userId);
+    
+    const { data, error } = await supabase!
+      .from('compression_history')
+      .select('*')
+      .eq('userId', userId)
+      .order('date', { ascending: false });
+    
+    if (error) {
+      console.error('Failed to get compression history:', error);
+      return [];
+    }
+    
+    console.log('Retrieved compression history:', data);
+    return data as CompressionHistoryItem[];
+  } catch (error) {
+    console.error('Error getting compression history:', error);
+    return [];
+  }
+}
+
+// Function to delete compression history item
+export async function deleteCompressionHistoryItem(
+  id: string
+): Promise<boolean> {
+  checkSupabaseConfig();
+  
+  try {
+    console.log('Deleting compression history item:', id);
+    
+    const { error } = await supabase!
+      .from('compression_history')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Failed to delete compression history:', error);
+      return false;
+    }
+    
+    console.log('Compression history item deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting compression history:', error);
+    return false;
+  }
 }
 
 // Function to get download URL

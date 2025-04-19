@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Redo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
-import { uploadCompressedFile, setupFileExpiration } from "@/services/supabase/fileOperations";
+import { uploadCompressedFile, setupFileExpiration, saveCompressionHistory } from "@/services/supabase/fileOperations";
 import { ensureCompressedFilesBucketExists } from "@/services/supabase/bucketManagement";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,6 +100,19 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
       console.log("File uploaded successfully, path:", path);
       console.log("Public URL:", publicUrl);
+      
+      // Save to history
+      const historyItem = {
+        fileName: getCompressedFileName(),
+        originalSize,
+        compressedSize,
+        date: new Date().toISOString(),
+        fileType: compressedFile.type || 'application/octet-stream',
+        cloudFilePath: path,
+        userId: user.id
+      };
+      
+      await saveCompressionHistory(historyItem);
       
       if (!publicUrl) {
         throw new Error("Failed to get public URL for the file");

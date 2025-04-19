@@ -3,7 +3,6 @@ import React from "react";
 import { Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBytes } from "@/lib/utils";
-import { getFileDownloadUrl } from "@/services/supabaseStorage";
 import { toast } from "@/components/ui/sonner";
 
 export interface CompressionHistoryItem {
@@ -14,6 +13,7 @@ export interface CompressionHistoryItem {
   date: string;
   fileType: string;
   cloudFilePath?: string;
+  userId: string;
 }
 
 interface UserHistoryProps {
@@ -27,35 +27,12 @@ const UserHistory: React.FC<UserHistoryProps> = ({
   onDownload, 
   onDelete 
 }) => {
-  const handleCloudDownload = async (item: CompressionHistoryItem) => {
-    if (!item.cloudFilePath) {
-      toast.error("No cloud file available");
-      return;
-    }
-
-    try {
-      const downloadUrl = await getFileDownloadUrl(item.cloudFilePath);
-      
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = item.fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success(`Downloaded ${item.fileName}`);
-    } catch (error) {
-      console.error("Download failed:", error);
-      toast.error("Failed to download file. Please check your Supabase configuration.");
-    }
-  };
-
   if (history.length === 0) {
     return (
       <div className="text-center p-8 border rounded-lg">
         <h3 className="text-lg font-medium mb-2">No compression history yet</h3>
         <p className="text-muted-foreground">
-          Your compressed files will appear here once you start using CrushIt
+          Your compressed files will appear here after you compress files while logged in
         </p>
       </div>
     );
@@ -98,8 +75,9 @@ const UserHistory: React.FC<UserHistoryProps> = ({
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => handleCloudDownload(item)}
+                onClick={() => onDownload(item.id)}
                 title="Download"
+                disabled={!item.cloudFilePath}
               >
                 <Download size={18} />
               </Button>
