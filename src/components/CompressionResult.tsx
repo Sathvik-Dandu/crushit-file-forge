@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Redo } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -76,7 +75,6 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
         }
       } catch (bucketError) {
         console.error("Error with storage bucket:", bucketError);
-        // Provide more specific error message based on the error
         if (bucketError instanceof Error) {
           if (bucketError.message.includes('row-level security')) {
             throw new Error("Permission denied: Please log in to your account to access storage.");

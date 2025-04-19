@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      compression_history: {
+        Row: {
+          cloudfilepath: string | null
+          compressedsize: number
+          date: string
+          filename: string
+          filetype: string
+          id: string
+          originalsize: number
+          userid: string
+        }
+        Insert: {
+          cloudfilepath?: string | null
+          compressedsize: number
+          date?: string
+          filename: string
+          filetype: string
+          id?: string
+          originalsize: number
+          userid: string
+        }
+        Update: {
+          cloudfilepath?: string | null
+          compressedsize?: number
+          date?: string
+          filename?: string
+          filetype?: string
+          id?: string
+          originalsize?: number
+          userid?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

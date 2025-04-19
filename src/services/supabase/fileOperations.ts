@@ -1,4 +1,3 @@
-
 import { checkSupabaseConfig, checkUserAuthentication } from './auth';
 import { ensureCompressedFilesBucketExists } from './bucketManagement';
 import { supabase } from './auth';
@@ -67,7 +66,15 @@ export async function saveCompressionHistory(
     
     const { data, error } = await supabase!
       .from('compression_history')
-      .insert([historyItem])
+      .insert([{
+        userId: historyItem.userId,
+        fileName: historyItem.fileName,
+        originalSize: historyItem.originalSize,
+        compressedSize: historyItem.compressedSize,
+        date: historyItem.date,
+        fileType: historyItem.fileType,
+        cloudFilePath: historyItem.cloudFilePath
+      }])
       .select()
       .single();
     
