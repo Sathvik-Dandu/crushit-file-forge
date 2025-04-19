@@ -25,30 +25,6 @@ async function checkUserAuthentication() {
   return session;
 }
 
-// Get current user role if applicable
-async function getUserRole() {
-  try {
-    const { data: { session } } = await supabase!.auth.getSession();
-    if (!session) return null;
-    
-    const { data, error } = await supabase!
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single();
-      
-    if (error) {
-      console.error('Error fetching user role:', error);
-      return null;
-    }
-    
-    return data?.role || null;
-  } catch (error) {
-    console.error('Error in getUserRole:', error);
-    return null;
-  }
-}
-
 // Ensure the compressed-files bucket exists or create it
 export async function ensureCompressedFilesBucketExists() {
   checkSupabaseConfig();
@@ -82,8 +58,25 @@ export async function ensureCompressedFilesBucketExists() {
       return true;
     }
     
-    // If bucket doesn't exist, try to create it with public access
-    console.log('Bucket not found, attempting to create');
+    // If bucket doesn't exist, try to use it without creating (for non-admin users)
+    console.log('Bucket not found, attempting to access it anyway');
+    
+    try {
+      // Try to list files in the bucket to see if it exists but wasn't in our list
+      const { data: filesList, error: filesError } = await supabase!.storage
+        .from('compressed-files')
+        .list();
+        
+      if (!filesError) {
+        console.log('Successfully accessed the compressed-files bucket');
+        return true;
+      }
+    } catch (accessError) {
+      console.log('Access check failed, will try to create bucket', accessError);
+    }
+    
+    // Last attempt: try to create the bucket
+    console.log('Attempting to create bucket');
     const { data: newBucket, error: createError } = await supabase!.storage.createBucket('compressed-files', {
       public: true, // Make bucket public
       fileSizeLimit: 50 * 1024 * 1024 // 50MB
@@ -94,7 +87,7 @@ export async function ensureCompressedFilesBucketExists() {
       
       // Provide specific error messages based on the error type
       if (createError.message.includes('row-level security') || createError.message.includes('permission')) {
-        throw new Error('Permission denied: Your account does not have permission to create storage buckets. Please contact an administrator.');
+        throw new Error('Permission denied: Your account does not have permission to create storage buckets. This is likely because you are not an administrator. Please contact support.');
       } else if (createError.message.includes('already exists')) {
         console.log('Bucket already exists but was not detected in the list');
         return true;
