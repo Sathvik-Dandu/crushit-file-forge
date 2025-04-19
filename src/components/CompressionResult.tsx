@@ -1,8 +1,10 @@
+
 import React, { useState } from "react";
 import { Redo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
-import { uploadCompressedFile, setupFileExpiration, ensureCompressedFilesBucketExists } from "@/services/supabaseStorage";
+import { uploadCompressedFile, setupFileExpiration } from "@/services/supabase/fileOperations";
+import { ensureCompressedFilesBucketExists } from "@/services/supabase/bucketManagement";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import DownloadButton from "./compression/DownloadButton";
