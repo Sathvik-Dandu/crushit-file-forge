@@ -103,15 +103,20 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = ({
                 <>
                   <p className="text-red-500">QR code could not be generated.</p>
                   <p className="text-sm mt-2 text-red-400">{qrError}</p>
-                  {qrError.includes("log in") || qrError.includes("logged in") || qrError.includes("Permission denied") ? (
-                    <Button 
-                      variant="default"
-                      onClick={handleLoginClick}
-                      className="mt-4 gap-2 bg-[#00ABE4] hover:bg-[#0096c7]"
-                    >
-                      <LogIn size={16} />
-                      Log In
-                    </Button>
+                  {qrError.includes("Storage bucket not found") || qrError.includes("permission") ? (
+                    <div className="mt-4 space-y-4">
+                      <p className="text-sm">
+                        You need to create a "compressed-files" bucket in your Supabase project.
+                      </p>
+                      <Button 
+                        variant="default"
+                        onClick={handleLoginClick}
+                        className="gap-2 bg-[#00ABE4] hover:bg-[#0096c7]"
+                      >
+                        <LogIn size={16} />
+                        Log In
+                      </Button>
+                    </div>
                   ) : (
                     <Button 
                       variant="outline"

@@ -40,7 +40,7 @@ export async function ensureCompressedFilesBucketExists(): Promise<boolean> {
       // Try to list files in the bucket to see if it exists but wasn't in our list
       const { data: filesList, error: filesError } = await supabase!.storage
         .from('compressed-files')
-        .list();
+        .list('');
         
       if (!filesError) {
         console.log('Successfully accessed the compressed-files bucket');
@@ -61,7 +61,7 @@ export async function ensureCompressedFilesBucketExists(): Promise<boolean> {
       console.error('Failed to create bucket:', createError);
       
       if (createError.message.includes('row-level security') || createError.message.includes('permission')) {
-        throw new Error('Permission denied: Your account does not have permission to create storage buckets. This is likely because you are not an administrator. Please contact support.');
+        throw new Error('Permission denied: Your account does not have permission to create storage buckets. Please log into the Supabase dashboard and create a "compressed-files" bucket manually.');
       } else if (createError.message.includes('already exists')) {
         console.log('Bucket already exists but was not detected in the list');
         return true;

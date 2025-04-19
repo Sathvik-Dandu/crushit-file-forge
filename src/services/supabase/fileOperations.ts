@@ -31,6 +31,9 @@ export async function uploadCompressedFile(
   
   if (error) {
     console.error('Upload error:', error);
+    if (error.message.includes('Bucket not found')) {
+      throw new Error('Storage bucket not found. Please log into the Supabase dashboard and create a "compressed-files" bucket manually.');
+    }
     throw new Error(`Failed to upload file: ${error.message}`);
   }
   
