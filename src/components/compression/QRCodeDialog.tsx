@@ -3,7 +3,8 @@ import React from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { QrCode, RefreshCw } from "lucide-react";
+import { QrCode, RefreshCw, LogIn } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface QRCodeDialogProps {
   qrUrl: string;
@@ -24,6 +25,13 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = ({
   isOpen,
   onOpenChange,
 }) => {
+  const navigate = useNavigate();
+  
+  const handleLoginClick = () => {
+    onOpenChange(false); // Close the dialog
+    navigate('/auth'); // Navigate to auth page
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -68,15 +76,26 @@ const QRCodeDialog: React.FC<QRCodeDialogProps> = ({
                 <>
                   <p className="text-red-500">QR code could not be generated.</p>
                   <p className="text-sm mt-2 text-red-400">{qrError}</p>
-                  <Button 
-                    variant="outline"
-                    onClick={onGenerate}
-                    disabled={isGeneratingQr}
-                    className="mt-4 gap-2"
-                  >
-                    <RefreshCw size={16} className={isGeneratingQr ? "animate-spin" : ""} />
-                    Try Again
-                  </Button>
+                  {qrError.includes("log in") || qrError.includes("logged in") || qrError.includes("Permission denied") ? (
+                    <Button 
+                      variant="default"
+                      onClick={handleLoginClick}
+                      className="mt-4 gap-2 bg-[#00ABE4] hover:bg-[#0096c7]"
+                    >
+                      <LogIn size={16} />
+                      Log In
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline"
+                      onClick={onGenerate}
+                      disabled={isGeneratingQr}
+                      className="mt-4 gap-2"
+                    >
+                      <RefreshCw size={16} className={isGeneratingQr ? "animate-spin" : ""} />
+                      Try Again
+                    </Button>
+                  )}
                 </>
               ) : isGeneratingQr ? (
                 <>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Redo } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DownloadButton from "./compression/DownloadButton";
 import QRCodeDialog from "./compression/QRCodeDialog";
 import CompressionStats from "./compression/CompressionStats";
+import { useNavigate } from "react-router-dom";
 
 interface CompressionResultProps {
   originalSize: number;
@@ -31,6 +31,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
+  const navigate = useNavigate();
   
   const getCompressedFileName = () => {
     const nameParts = fileName.split('.');
@@ -41,8 +42,14 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   
   const generateDownloadUrl = async () => {
     if (!user || !user.id) {
-      toast.error("Please log in to generate a QR code");
-      setQrError("You need to be logged in to generate a QR code");
+      const errorMessage = "Please log in to generate a QR code";
+      toast.error(errorMessage, {
+        action: {
+          label: "Login",
+          onClick: () => navigate("/auth")
+        }
+      });
+      setQrError("You need to be logged in to your account to generate a QR code. Please use the login button above.");
       return;
     }
     
@@ -70,7 +77,7 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
         // Provide more specific error message based on the error
         if (bucketError instanceof Error) {
           if (bucketError.message.includes('row-level security')) {
-            throw new Error("Permission denied: Please log out and back in to refresh your session.");
+            throw new Error("Permission denied: Please log in to your account to access storage.");
           } else if (bucketError.message.includes('permission')) {
             throw new Error("Storage permission denied. Please try again later.");
           }
@@ -113,7 +120,18 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       console.error("Failed to generate download URL:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       setQrError(errorMessage);
-      toast.error("Failed to upload file: " + errorMessage);
+      
+      if (errorMessage.includes("log in") || errorMessage.includes("Permission denied")) {
+        toast.error("Authentication required", {
+          action: {
+            label: "Login",
+            onClick: () => navigate("/auth")
+          }
+        });
+      } else {
+        toast.error("Failed to upload file: " + errorMessage);
+      }
+      
       return null;
     } finally {
       setIsGeneratingQr(false);
@@ -121,15 +139,12 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   };
 
   const handleQrButtonClick = () => {
-    // Only regenerate if not already generating or if previous attempt had an error
     if (!isGeneratingQr) {
       if (qrError) {
-        // Reset error state and try again
         setQrError(null);
       }
       generateDownloadUrl();
     }
-    // Always open the dialog, even if we're still generating
     setIsQrDialogOpen(true);
   };
 
