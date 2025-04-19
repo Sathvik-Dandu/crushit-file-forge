@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,13 +6,13 @@ import { toast } from "@/components/ui/sonner";
 
 export interface CompressionHistoryItem {
   id: string;
+  userId: string;
   fileName: string;
   originalSize: number;
   compressedSize: number;
   date: string;
   fileType: string;
-  cloudFilePath?: string;
-  userId: string;
+  cloudFilePath: string | null;
 }
 
 interface UserHistoryProps {

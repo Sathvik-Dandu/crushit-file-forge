@@ -1,15 +1,14 @@
-import React, { useState } from "react";
-import { Redo } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/sonner";
-import { uploadCompressedFile, setupFileExpiration, saveCompressionHistory } from "@/services/supabase/fileOperations";
-import { ensureCompressedFilesBucketExists } from "@/services/supabase/bucketManagement";
+
+import React from "react";
 import { User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/sonner";
+import { useNavigate } from "react-router-dom";
 import DownloadButton from "./compression/DownloadButton";
 import QRCodeDialog from "./compression/QRCodeDialog";
 import CompressionStats from "./compression/CompressionStats";
-import { useNavigate } from "react-router-dom";
+import { generateDownloadUrl } from "@/services/compressionService";
+import { Button } from "@/components/ui/button";
+import { Redo } from "lucide-react";
 
 interface CompressionResultProps {
   originalSize: number;
@@ -28,20 +27,13 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
   onReset,
   user
 }) => {
-  const [qrUrl, setQrUrl] = useState<string>("");
-  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
-  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
-  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrUrl, setQrUrl] = React.useState<string>("");
+  const [isGeneratingQr, setIsGeneratingQr] = React.useState(false);
+  const [isQrDialogOpen, setIsQrDialogOpen] = React.useState(false);
+  const [qrError, setQrError] = React.useState<string | null>(null);
   const navigate = useNavigate();
   
-  const getCompressedFileName = () => {
-    const nameParts = fileName.split('.');
-    const extension = nameParts.pop();
-    const baseName = nameParts.join('.');
-    return `${baseName}_compressed.${extension}`;
-  };
-  
-  const generateDownloadUrl = async () => {
+  const handleQrGeneration = async () => {
     if (!user || !user.id) {
       const errorMessage = "Please log in to generate a QR code";
       toast.error(errorMessage, {
@@ -58,77 +50,15 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
     setQrError(null);
     
     try {
-      console.log("Starting file upload process");
-      
-      // First check if the user is authenticated with Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Your session has expired. Please log in again.");
-      }
-      
-      try {
-        // Check if we can access the storage bucket
-        console.log("Checking if storage bucket exists");
-        const bucketCreated = await ensureCompressedFilesBucketExists();
-        if (!bucketCreated) {
-          throw new Error("Could not access storage bucket");
-        }
-      } catch (bucketError) {
-        console.error("Error with storage bucket:", bucketError);
-        if (bucketError instanceof Error) {
-          if (bucketError.message.includes('row-level security')) {
-            throw new Error("Permission denied: Please log in to your account to access storage.");
-          } else if (bucketError.message.includes('permission')) {
-            throw new Error("Storage permission denied. Please try again later.");
-          }
-        }
-        throw bucketError;
-      }
-      
-      const compressedFileAsFile = new File([compressedFile], getCompressedFileName(), {
-        type: compressedFile.type || 'application/octet-stream'
-      });
-      
-      if (!supabase) {
-        console.error("Supabase client is not initialized");
-        throw new Error("Storage service is not available");
-      }
-      
-      console.log("Uploading file to Supabase");
-      const { path, publicUrl } = await uploadCompressedFile(compressedFileAsFile, user.id);
-      console.log("File uploaded successfully, path:", path);
-      console.log("Public URL:", publicUrl);
-      
-      // Save to history
-      const historyItem = {
-        fileName: getCompressedFileName(),
+      const url = await generateDownloadUrl({
+        compressedFile,
+        fileName,
         originalSize,
         compressedSize,
-        date: new Date().toISOString(),
-        fileType: compressedFile.type || 'application/octet-stream',
-        cloudFilePath: path,
-        userId: user.id
-      };
-      
-      await saveCompressionHistory(historyItem);
-      
-      if (!publicUrl) {
-        throw new Error("Failed to get public URL for the file");
-      }
-      
-      const expirationTime = new Date();
-      expirationTime.setMinutes(expirationTime.getMinutes() + 5);
-      await setupFileExpiration(path, 5);
-      console.log("File expiration set to:", expirationTime.toISOString());
-      
-      const downloadUrl = new URL(window.location.origin);
-      downloadUrl.pathname = '/download-helper.html';
-      downloadUrl.hash = `${encodeURIComponent(publicUrl)},${encodeURIComponent(getCompressedFileName())},${encodeURIComponent(expirationTime.getTime().toString())}`;
-      
-      console.log("Generated download URL:", downloadUrl.toString());
-      setQrUrl(downloadUrl.toString());
+        user
+      });
+      setQrUrl(url);
       setIsQrDialogOpen(true);
-      return publicUrl;
     } catch (error) {
       console.error("Failed to generate download URL:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
@@ -144,21 +74,9 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       } else {
         toast.error("Failed to upload file: " + errorMessage);
       }
-      
-      return null;
     } finally {
       setIsGeneratingQr(false);
     }
-  };
-
-  const handleQrButtonClick = () => {
-    if (!isGeneratingQr) {
-      if (qrError) {
-        setQrError(null);
-      }
-      generateDownloadUrl();
-    }
-    setIsQrDialogOpen(true);
   };
 
   return (
@@ -172,13 +90,13 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
       
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
         <DownloadButton compressedFile={compressedFile} fileName={fileName} />
-
+        
         <QRCodeDialog
           qrUrl={qrUrl}
-          fileName={getCompressedFileName()}
+          fileName={fileName}
           isGeneratingQr={isGeneratingQr}
           qrError={qrError}
-          onGenerate={handleQrButtonClick}
+          onGenerate={handleQrGeneration}
           isOpen={isQrDialogOpen}
           onOpenChange={setIsQrDialogOpen}
         />
@@ -197,3 +115,4 @@ const CompressionResult: React.FC<CompressionResultProps> = ({
 };
 
 export default CompressionResult;
+

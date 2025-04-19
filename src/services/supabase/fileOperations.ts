@@ -67,13 +67,13 @@ export async function saveCompressionHistory(
     const { data, error } = await supabase!
       .from('compression_history')
       .insert([{
-        userId: historyItem.userId,
-        fileName: historyItem.fileName,
-        originalSize: historyItem.originalSize,
-        compressedSize: historyItem.compressedSize,
+        userid: historyItem.userId,
+        filename: historyItem.fileName,
+        originalsize: historyItem.originalSize,
+        compressedsize: historyItem.compressedSize,
         date: historyItem.date,
-        fileType: historyItem.fileType,
-        cloudFilePath: historyItem.cloudFilePath
+        filetype: historyItem.fileType,
+        cloudfilepath: historyItem.cloudFilePath
       }])
       .select()
       .single();
@@ -83,8 +83,20 @@ export async function saveCompressionHistory(
       return null;
     }
     
-    console.log('Compression history saved successfully:', data);
-    return data as CompressionHistoryItem;
+    // Convert database format to CompressionHistoryItem format
+    const result: CompressionHistoryItem = {
+      id: data.id,
+      userId: data.userid,
+      fileName: data.filename,
+      originalSize: data.originalsize,
+      compressedSize: data.compressedsize,
+      date: data.date,
+      fileType: data.filetype,
+      cloudFilePath: data.cloudfilepath
+    };
+    
+    console.log('Compression history saved successfully:', result);
+    return result;
   } catch (error) {
     console.error('Error saving compression history:', error);
     return null;
@@ -103,7 +115,7 @@ export async function getCompressionHistory(
     const { data, error } = await supabase!
       .from('compression_history')
       .select('*')
-      .eq('userId', userId)
+      .eq('userid', userId)
       .order('date', { ascending: false });
     
     if (error) {
@@ -111,8 +123,20 @@ export async function getCompressionHistory(
       return [];
     }
     
-    console.log('Retrieved compression history:', data);
-    return data as CompressionHistoryItem[];
+    // Convert database format to CompressionHistoryItem format
+    const result = data.map(item => ({
+      id: item.id,
+      userId: item.userid,
+      fileName: item.filename,
+      originalSize: item.originalsize,
+      compressedSize: item.compressedsize,
+      date: item.date,
+      fileType: item.filetype,
+      cloudFilePath: item.cloudfilepath
+    }));
+    
+    console.log('Retrieved compression history:', result);
+    return result;
   } catch (error) {
     console.error('Error getting compression history:', error);
     return [];
