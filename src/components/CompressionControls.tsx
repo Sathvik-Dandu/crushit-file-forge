@@ -33,7 +33,7 @@ const CompressionControls: React.FC<CompressionControlsProps> = ({
 
   const handleTargetSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0) {
+    if (!isNaN(value)) {
       setTargetSize(value);
       // Adjust compression level based on target size
       const newCompressionLevel = 100 - Math.floor((value / originalSize) * 100);
@@ -134,7 +134,7 @@ const CompressionControls: React.FC<CompressionControlsProps> = ({
                 type="number"
                 value={targetSize}
                 onChange={handleTargetSizeChange}
-                min={1}
+                min={0}
                 max={originalSize}
               />
               <div className="flex items-center gap-1 w-20">
