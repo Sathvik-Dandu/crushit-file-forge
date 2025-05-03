@@ -1,6 +1,6 @@
 
 import React from "react";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -28,7 +28,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-primary/10 text-primary font-bold text-xl p-2 rounded">
+            <div 
+              onClick={() => navigate("/")} 
+              className="bg-primary/10 text-primary font-bold text-xl p-2 rounded cursor-pointer"
+            >
               CrushIt
             </div>
             <h1 className="text-xl font-bold hidden sm:block">
@@ -39,6 +42,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div>
             {user ? (
               <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate("/dashboard")} 
+                  className="flex items-center gap-1"
+                >
+                  <BarChart2 size={16} />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </Button>
+                
                 <div className="flex items-center gap-2">
                   <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                     <User size={18} />
