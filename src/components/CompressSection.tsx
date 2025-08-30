@@ -47,11 +47,11 @@ const CompressSection: React.FC<CompressSectionProps> = ({ user }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold">Upload Files</h2>
-          <p className="text-muted-foreground">
+    <div className="grid grid-cols-1 gap-6 lg:gap-8 xl:grid-cols-2">
+      <div className="space-y-4 sm:space-y-6 order-1">
+        <div className="space-y-1 sm:space-y-2">
+          <h2 className="text-xl sm:text-2xl font-bold">Upload Files</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Select any files to compress. We support PDFs, Office documents, images, and more.
           </p>
         </div>
@@ -70,10 +70,10 @@ const CompressSection: React.FC<CompressSectionProps> = ({ user }) => {
               ))}
             </div>
             
-            {isCompressing ? (
-              <div className="text-center p-8">
+        {isCompressing ? (
+              <div className="text-center p-6 sm:p-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="mt-2 text-muted-foreground">Compressing your files...</p>
+                <p className="mt-2 text-sm sm:text-base text-muted-foreground">Compressing your files...</p>
               </div>
             ) : (
               <CompressionControls
@@ -85,12 +85,12 @@ const CompressSection: React.FC<CompressSectionProps> = ({ user }) => {
         )}
       </div>
       
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 order-2 xl:order-2">
         {compressedFiles.length > 0 && selectedFiles.length > 0 && (
           <>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Compression Results</h2>
-              <p className="text-muted-foreground">
+            <div className="space-y-1 sm:space-y-2">
+              <h2 className="text-xl sm:text-2xl font-bold">Compression Results</h2>
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Your files have been compressed and are ready for download.
               </p>
             </div>

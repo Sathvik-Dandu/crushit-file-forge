@@ -92,30 +92,30 @@ const CompressionControls: React.FC<CompressionControlsProps> = ({
           <TabsTrigger value="manual">Manual</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="preset" className="mt-4 space-y-6">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <TabsContent value="preset" className="mt-4 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 gap-3 sm:gap-2 lg:grid-cols-3">
             <Button 
               variant="outline" 
-              className="h-auto flex flex-col items-center justify-center p-4 gap-1"
+              className="h-auto flex flex-col items-center justify-center p-4 sm:p-4 gap-1 touch-manipulation min-h-[80px]"
               onClick={() => handlePresetSelect("email")}
             >
-              <span className="text-md font-medium">Email-Ready</span>
+              <span className="text-sm sm:text-base font-medium">Email-Ready</span>
               <span className="text-xs text-muted-foreground">~5MB max</span>
             </Button>
             <Button 
               variant="outline" 
-              className="h-auto flex flex-col items-center justify-center p-4 gap-1"
+              className="h-auto flex flex-col items-center justify-center p-4 sm:p-4 gap-1 touch-manipulation min-h-[80px]"
               onClick={() => handlePresetSelect("web")}
             >
-              <span className="text-md font-medium">Web Upload</span>
+              <span className="text-sm sm:text-base font-medium">Web Upload</span>
               <span className="text-xs text-muted-foreground">~1MB max</span>
             </Button>
             <Button 
               variant="outline" 
-              className="h-auto flex flex-col items-center justify-center p-4 gap-1"
+              className="h-auto flex flex-col items-center justify-center p-4 sm:p-4 gap-1 touch-manipulation min-h-[80px]"
               onClick={() => handlePresetSelect("max")}
             >
-              <span className="text-md font-medium">Max Compression</span>
+              <span className="text-sm sm:text-base font-medium">Max Compression</span>
               <span className="text-xs text-muted-foreground">Smallest size</span>
             </Button>
           </div>
@@ -129,17 +129,18 @@ const CompressionControls: React.FC<CompressionControlsProps> = ({
                 {formatBytes(targetSize)} (from {formatBytes(originalSize)})
               </span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 type="number"
                 value={targetSize}
                 onChange={handleTargetSizeChange}
                 min={0}
                 max={originalSize}
+                className="flex-1 text-base sm:text-sm touch-manipulation"
               />
-              <div className="flex items-center gap-1 w-20">
+              <div className="flex items-center gap-1 w-full sm:w-20">
                 <select 
-                  className="bg-background border rounded-md h-10 px-2 w-full text-sm"
+                  className="bg-background border rounded-md h-10 sm:h-10 px-2 w-full text-sm touch-manipulation"
                   onChange={(e) => {
                     const multiplier = parseInt(e.target.value);
                     const value = parseInt((document.querySelector('input[type="number"]') as HTMLInputElement).value);
@@ -148,7 +149,7 @@ const CompressionControls: React.FC<CompressionControlsProps> = ({
                     }
                   }}
                 >
-                  <option value="1">B</option>
+                  <option value="1">Bytes</option>
                   <option value="1024">KB</option>
                   <option value="1048576" selected>MB</option>
                 </select>
@@ -178,9 +179,10 @@ const CompressionControls: React.FC<CompressionControlsProps> = ({
       
       <Button 
         onClick={() => onCompress(targetSize, compressionLevel)}
-        className="w-full mt-2"
+        className="w-full mt-2 touch-manipulation py-3 text-base font-medium"
+        size="lg"
       >
-        Compress File
+        Compress Files
       </Button>
     </div>
   );

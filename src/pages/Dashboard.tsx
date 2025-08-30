@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
+import MobileOptimizedCard from "@/components/MobileOptimizedCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { getCompressionHistory } from "@/services/supabase/fileOperations";
 import { CompressionHistoryItem } from "@/components/UserHistory";
@@ -147,73 +148,47 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Stats Overview */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Files Compressed</CardTitle>
-                  <FileType2 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalFiles}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Files processed through CrushIt
-                  </p>
-                </CardContent>
-              </Card>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <MobileOptimizedCard
+                title="Total Files Compressed"
+                value={stats.totalFiles}
+                description="Files processed through CrushIt"
+                icon={<FileType2 className="h-4 w-4" />}
+              />
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Storage Saved</CardTitle>
-                  <HardDrive className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatBytes(stats.totalSaved)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Total disk space recovered
-                  </p>
-                </CardContent>
-              </Card>
+              <MobileOptimizedCard
+                title="Storage Saved"
+                value={formatBytes(stats.totalSaved)}
+                description="Total disk space recovered"
+                icon={<HardDrive className="h-4 w-4" />}
+              />
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Average Reduction</CardTitle>
-                  <TrendingDown className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.averageReduction}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    Average compression rate
-                  </p>
-                </CardContent>
-              </Card>
+              <MobileOptimizedCard
+                title="Average Reduction"
+                value={`${stats.averageReduction}%`}
+                description="Average compression rate"
+                icon={<TrendingDown className="h-4 w-4" />}
+              />
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Most Common Format</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  {fileTypeData.length > 0 ? (
-                    <>
-                      <div className="text-2xl font-bold">
-                        {fileTypeData.sort((a, b) => b.value - a.value)[0]?.name || "N/A"}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {fileTypeData.sort((a, b) => b.value - a.value)[0]?.value || 0} files compressed
-                      </p>
-                    </>
-                  ) : (
-                    <div className="text-2xl font-bold">N/A</div>
-                  )}
-                </CardContent>
-              </Card>
+              <MobileOptimizedCard
+                title="Most Common Format"
+                value={fileTypeData.length > 0 
+                  ? fileTypeData.sort((a, b) => b.value - a.value)[0]?.name || "N/A"
+                  : "N/A"
+                }
+                description={fileTypeData.length > 0 
+                  ? `${fileTypeData.sort((a, b) => b.value - a.value)[0]?.value || 0} files compressed`
+                  : "No files yet"
+                }
+                icon={<Clock className="h-4 w-4" />}
+              />
             </div>
 
             {/* Charts */}
             <Tabs defaultValue="formats" className="w-full">
-              <TabsList>
-                <TabsTrigger value="formats">File Formats</TabsTrigger>
-                <TabsTrigger value="trends">Compression Trends</TabsTrigger>
+              <TabsList className="grid grid-cols-2 w-full sm:w-auto touch-manipulation">
+                <TabsTrigger value="formats" className="text-sm sm:text-base">File Formats</TabsTrigger>
+                <TabsTrigger value="trends" className="text-sm sm:text-base">Trends</TabsTrigger>
               </TabsList>
               
               <TabsContent value="formats" className="space-y-4">
@@ -279,27 +254,29 @@ const Dashboard = () => {
                 <CardTitle>Recent Compressions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-auto rounded-md border">
-                  <table className="w-full text-sm">
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="w-full text-xs sm:text-sm min-w-[600px]">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="whitespace-nowrap px-4 py-3 text-left font-medium">File Name</th>
-                        <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Type</th>
-                        <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Date</th>
-                        <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Original Size</th>
-                        <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Compressed Size</th>
-                        <th className="whitespace-nowrap px-4 py-3 text-left font-medium">Reduction</th>
+                        <th className="whitespace-nowrap px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">File Name</th>
+                        <th className="whitespace-nowrap px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Type</th>
+                        <th className="whitespace-nowrap px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Date</th>
+                        <th className="whitespace-nowrap px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Original</th>
+                        <th className="whitespace-nowrap px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Compressed</th>
+                        <th className="whitespace-nowrap px-2 sm:px-4 py-2 sm:py-3 text-left font-medium">Saved</th>
                       </tr>
                     </thead>
                     <tbody>
                       {history.slice(0, 5).map((item) => (
                         <tr key={item.id} className="border-t">
-                          <td className="px-4 py-3 truncate max-w-[200px]">{item.fileName}</td>
-                          <td className="px-4 py-3">{item.fileType}</td>
-                          <td className="px-4 py-3">{new Date(item.date).toLocaleDateString()}</td>
-                          <td className="px-4 py-3">{formatBytes(item.originalSize)}</td>
-                          <td className="px-4 py-3">{formatBytes(item.compressedSize)}</td>
-                          <td className="px-4 py-3 text-green-600">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 truncate max-w-[120px] sm:max-w-[200px]" title={item.fileName}>
+                            {item.fileName}
+                          </td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3">{item.fileType}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3">{new Date(item.date).toLocaleDateString()}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3">{formatBytes(item.originalSize)}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3">{formatBytes(item.compressedSize)}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-green-600 font-medium">
                             {Math.round((1 - item.compressedSize / item.originalSize) * 100)}%
                           </td>
                         </tr>

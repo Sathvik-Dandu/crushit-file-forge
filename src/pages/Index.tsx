@@ -95,9 +95,9 @@ const Index = () => {
     <Layout>
       {user ? (
         <Tabs defaultValue="compress" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="compress">Compress Files</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-6 sm:mb-8 h-12 touch-manipulation">
+            <TabsTrigger value="compress" className="text-sm sm:text-base">Compress Files</TabsTrigger>
+            <TabsTrigger value="history" className="text-sm sm:text-base">History</TabsTrigger>
           </TabsList>
           
           <TabsContent value="compress" className="space-y-8">
@@ -119,7 +119,7 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       ) : (
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-8 lg:gap-12 xl:grid-cols-2">
           <CompressSection user={user} />
           <LoginSection />
         </div>
